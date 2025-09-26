@@ -11,7 +11,7 @@ import AddMenuSheet from './components/AddMenuSheet'; // Import the new menu she
 import { toast } from './components/Toaster';
 import { 
   HomeIcon, UserGroupIcon, ClipboardListIcon, CalendarIcon, ReceiptIcon, CurrencyBangladeshiIcon,
-  MenuIcon, XIcon, PlusIcon, UserPlusIcon
+  MenuIcon, XIcon, PlusIcon, UserPlusIcon, SearchIcon
 } from './components/Icons';
 
 const App: React.FC = () => {
@@ -23,6 +23,12 @@ const App: React.FC = () => {
   const [sheetConfig, setSheetConfig] = useState<ModalConfig>({ isOpen: false, type: null, data: null });
   const [alertDialog, setAlertDialog] = useState<AlertDialogConfig>({ isOpen: false, title: '', description: '', onConfirm: () => {} });
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    // Clear search when user context changes on the history page
+    setSearchQuery('');
+  }, [filterUserId]);
 
   // --- Calculations ---
   const calculations = useMemo(() => {
@@ -179,51 +185,105 @@ const App: React.FC = () => {
 
   const TransactionsPage = () => {
     const filteredUser = filterUserId ? users.find(u => u.id === filterUserId) : null;
-    let transactionsToDisplay = sortedTransactions;
-    if(filteredUser) {
-        const userMealCosts = transactionsToDisplay.filter(t => t.type === 'meal' && t.userId === filteredUser.id).map(t => ({...t, type: 'expense' as const, amount: (t.mealCount ?? 0) * calculations.mealRate, description: `${t.mealCount} Meals Cost`}));
-        transactionsToDisplay = [...transactionsToDisplay.filter(t => t.userId === filteredUser.id && t.type !== 'meal'), ...userMealCosts].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }
-
-    let runningBalance = filterUserId 
-        ? calculations.userData.find(ud => ud.user.id === filterUserId)?.balance ?? 0 
+  
+    const transactionsToDisplay = useMemo(() => {
+      if (filteredUser) {
+        const userMealCosts = sortedTransactions
+          .filter(t => t.type === 'meal' && t.userId === filteredUser.id)
+          .map(t => ({
+            ...t,
+            type: 'expense' as const,
+            amount: (t.mealCount ?? 0) * calculations.mealRate,
+            description: `${t.mealCount} Meals Cost`
+          }));
+  
+        return [...sortedTransactions.filter(t => t.userId === filteredUser.id && t.type !== 'meal'), ...userMealCosts]
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      }
+      // For general history, don't show raw meal entries
+      return sortedTransactions.filter(t => t.type !== 'meal');
+    }, [filteredUser, sortedTransactions, calculations.mealRate]);
+  
+    const allItemsWithRunningBalance = useMemo(() => {
+      const finalBalance = filterUserId
+        ? calculations.userData.find(d => d.user.id === filterUserId)?.balance ?? 0
         : calculations.remainingBalance;
-    
-    // Recalculate running balance correctly
-    const itemsWithRunningBalance = transactionsToDisplay.reduce((acc, t) => {
-        const balanceAfter = acc.length > 0 ? acc[acc.length-1].runningBalance : (filteredUser ? calculations.userData.find(d=>d.user.id===filterUserId)!.balance : calculations.remainingBalance);
-        let newBalance = balanceAfter;
-        if (t.type === 'deposit') newBalance += t.amount;
-        else if (t.type === 'expense') newBalance -= t.amount;
-        acc.push({transaction: t, runningBalance: newBalance});
-        return acc;
-    }, [] as {transaction: Transaction, runningBalance: number}[]).reverse();
-    
-    // Correct initial running balance
-    if(itemsWithRunningBalance.length > 0) {
-        const totalDeposits = transactionsToDisplay.filter(t => t.type === 'deposit').reduce((sum,t) => sum+t.amount, 0);
-        const totalExpenses = transactionsToDisplay.filter(t => t.type === 'expense').reduce((sum,t) => sum+t.amount, 0);
-        let finalBalance = totalDeposits-totalExpenses;
-
-        for (let i = 0; i < itemsWithRunningBalance.length; i++) {
-            itemsWithRunningBalance[i].runningBalance = finalBalance;
-            const t = itemsWithRunningBalance[i].transaction;
-            if(t.type === 'deposit') finalBalance -= t.amount;
-            else if (t.type === 'expense') finalBalance += t.amount;
+  
+      let currentBalance = finalBalance;
+  
+      return transactionsToDisplay.map(transaction => {
+        const balanceToShow = currentBalance;
+  
+        if (transaction.type === 'deposit') {
+          currentBalance -= transaction.amount;
+        } else if (transaction.type === 'expense') {
+          currentBalance += transaction.amount;
         }
-    }
-
-
+  
+        return { transaction, runningBalance: balanceToShow };
+      });
+    }, [transactionsToDisplay, filterUserId, calculations]);
+  
+    const searchedItemsWithRunningBalance = useMemo(() => {
+      if (!searchQuery) {
+        return allItemsWithRunningBalance;
+      }
+      const lowercasedQuery = searchQuery.toLowerCase();
+  
+      return allItemsWithRunningBalance.filter(({ transaction: t }) => {
+        const user = users.find(u => u.id === t.userId);
+        const userName = user ? user.name.toLowerCase() : '';
+  
+        if (t.type === 'deposit') {
+          return userName.includes(lowercasedQuery);
+        }
+  
+        if (t.type === 'expense') {
+          const description = t.description ? t.description.toLowerCase() : '';
+          return description.includes(lowercasedQuery) || userName.includes(lowercasedQuery);
+        }
+        return false;
+      });
+    }, [searchQuery, allItemsWithRunningBalance, users]);
+  
     return (
       <div className="bg-white p-6 rounded-lg shadow-md">
         <h2 className="text-xl font-bold text-gray-700 mb-4">
           {filteredUser ? `Transaction History for ${filteredUser.name}` : 'Transaction History'}
           {filteredUser && <button onClick={() => setFilterUserId(null)} className="ml-4 text-sm font-normal text-green-600 hover:underline">(Show All)</button>}
         </h2>
+  
+        <div className="mb-4 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <SearchIcon />
+          </div>
+          <input
+            type="text"
+            placeholder="Search by description or name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            aria-label="Search transactions"
+          />
+        </div>
+  
         <ul className="space-y-4">
-          {itemsWithRunningBalance.map(({transaction, runningBalance}) => (
-            <TransactionListItem key={transaction.id} transaction={transaction} users={users} onEdit={() => openSheet(transaction.type, transaction)} onDelete={() => confirmRemoveTransaction(transaction)} runningBalance={runningBalance} />
-          ))}
+          {transactionsToDisplay.length === 0 ? (
+            <li className="text-center text-gray-500 py-8">No transactions to display.</li>
+          ) : searchedItemsWithRunningBalance.length === 0 ? (
+            <li className="text-center text-gray-500 py-8">No results for "{searchQuery}"</li>
+          ) : (
+            searchedItemsWithRunningBalance.map(({ transaction, runningBalance }) => (
+              <TransactionListItem
+                key={transaction.id}
+                transaction={transaction}
+                users={users}
+                onEdit={() => openSheet(transaction.type, transaction)}
+                onDelete={() => confirmRemoveTransaction(transaction)}
+                runningBalance={runningBalance}
+              />
+            ))
+          )}
         </ul>
       </div>
     );
