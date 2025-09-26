@@ -14,21 +14,9 @@ import {
   MenuIcon, XIcon, PlusIcon, UserPlusIcon
 } from './components/Icons';
 
-// --- MOCK DATA ---
-const INITIAL_USERS: User[] = [
-  { id: '1', name: 'parvez', avatarUrl: '' },
-  { id: '2', name: 'fahim', avatarUrl: '' },
-];
-const INITIAL_TRANSACTIONS: Transaction[] = [
-  { id: 't1', type: 'deposit', userId: '1', date: '2025-09-25T10:00:00Z', amount: 500, description: 'Initial Deposit' },
-  { id: 't2', type: 'expense', userId: '1', date: '2025-09-25T14:00:00Z', amount: 240, description: 'Groceries' },
-  { id: 't3', type: 'meal', userId: '1', date: '2025-09-25T12:00:00Z', amount: 0, mealCount: 2, description: 'Lunch & Dinner' },
-  { id: 't4', type: 'meal', userId: '2', date: '2025-09-25T12:00:00Z', amount: 0, mealCount: 2, description: 'Lunch & Dinner' },
-];
-
 const App: React.FC = () => {
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
-  const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
+  const [users, setUsers] = useState<User[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [page, setPage] = useState<Page>('home');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false); // State for the main "Add New" menu

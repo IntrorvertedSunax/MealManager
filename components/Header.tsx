@@ -7,8 +7,11 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ title, onOpenMenu }) => {
-  // Using a fixed date to match the screenshot
-  const displayDate = "September 25, 2025";
+  const displayDate = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   return (
     <header className="bg-gray-50 sticky top-0 z-40 flex-shrink-0">

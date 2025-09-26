@@ -25,7 +25,9 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users 
       const dd = String(today.getDate()).padStart(2, '0');
       
       setFormData(data || { date: `${yyyy}-${mm}-${dd}` });
-      if(type === 'meal' && data?.mealCount) {
+      // FIX: Add a type guard to ensure `data` is a `Transaction` before accessing `mealCount`.
+      // The `in` operator checks for the property and narrows the type.
+      if(type === 'meal' && data && 'mealCount' in data && data.mealCount) {
         setMealChecks({ breakfast: data.mealCount >= 1, lunch: data.mealCount >= 2, dinner: data.mealCount >= 3});
       } else {
         setMealChecks({ breakfast: true, lunch: true, dinner: true });
