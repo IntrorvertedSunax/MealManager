@@ -1,0 +1,5 @@
+{
+  "name": "Meal Management",
+  "description": "A comprehensive meal and expense management system for flatmates. Track meals, log shared expenses and individual deposits, and automatically calculate balances to ensure fairness and transparency in your household.",
+  "requestFramePermissions": []
+}
