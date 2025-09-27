@@ -24,13 +24,7 @@ const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { leadingIco
           {leadingIcon}
         </div>
       )}
-      <input 
-        {...props} 
-        className={`${baseStyles} ${paddingClasses} ${className || ''}`}
-        spellCheck="false"
-        autoCorrect="off"
-        autoCapitalize="off"
-      />
+      <input {...props} className={`${baseStyles} ${paddingClasses} ${className || ''}`} />
       {trailingIcon && (
         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
           {trailingIcon}
@@ -197,9 +191,8 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
         });
       }
     }
-  };
     // Handle different input types properly
-    }
+  };
 
   const FormField: React.FC<{label: string, children: React.ReactNode, description?: string, error?: string}> = ({label, children, description, error}) => (
     <div>
@@ -208,7 +201,7 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
         {children}
         {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
-  )
+  );
 
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-end transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={onClose}>
