@@ -24,7 +24,13 @@ const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { leadingIco
           {leadingIcon}
         </div>
       )}
-      <input {...props} className={`${baseStyles} ${paddingClasses} ${className || ''}`} />
+      <input 
+        {...props} 
+        className={`${baseStyles} ${paddingClasses} ${className || ''}`}
+        spellCheck="false"
+        autoCorrect="off"
+        autoCapitalize="off"
+      />
       {trailingIcon && (
         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
           {trailingIcon}
@@ -80,6 +86,26 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Reset form data when modal opens/closes or type changes
+  React.useEffect(() => {
+    if (isOpen && type) {
+      if (isEditing && data) {
+        const formDataToSet = { ...data };
+        if ('date' in formDataToSet && formDataToSet.date) {
+          formDataToSet.date = new Date(formDataToSet.date).toISOString().split('T')[0];
+        }
+        if ('amount' in formDataToSet && formDataToSet.amount !== undefined) {
+          formDataToSet.amount = String(formDataToSet.amount);
+        }
+        setFormData(formDataToSet);
+      } else {
+        const today = new Date().toISOString().split('T')[0];
+        const defaultFormData: Partial<User & Transaction> = { date: today };
+        setFormData(defaultFormData);
+      }
+      setErrors({});
+    }
+  }, [isOpen, type, data, isEditing]);
   const mealCount = (mealChecks.breakfast ? 1 : 0) + (mealChecks.lunch ? 1 : 0) + (mealChecks.dinner ? 1 : 0);
   
   if (!isOpen || !type) return null;
@@ -146,6 +172,7 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
 
     if (name in mealChecks) {
       setMealChecks(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
+      return;
     } else {
       if (name === 'amount' && value && !/^\d*\.?\d*$/.test(value)) {
           return;
@@ -171,6 +198,8 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
       }
     }
   };
+    // Handle different input types properly
+    }
 
   const FormField: React.FC<{label: string, children: React.ReactNode, description?: string, error?: string}> = ({label, children, description, error}) => (
     <div>
@@ -197,13 +226,26 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
         <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
           {type === 'user' && (
             <FormField label="Member Name" error={errors.name}>
-              <Input autoFocus type="text" name="name" value={formData.name || ''} onChange={handleInputChange} />
+              <Input 
+                autoFocus 
+                type="text" 
+                name="name" 
+                value={formData.name || ''} 
+                onChange={handleInputChange}
+                placeholder="Enter member name"
+                autoComplete="off"
+              />
             </FormField>
           )}
 
           {(type === 'expense' || type === 'deposit') && (
             <FormField label="User" error={errors.userId}>
-              <Select name="userId" value={formData.userId || ''} onChange={handleInputChange}>
+              <Select 
+                name="userId" 
+                value={formData.userId || ''} 
+                onChange={handleInputChange}
+                autoFocus={type !== 'user'}
+              >
                 <option value="" disabled>Select a user</option>
                 {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
               </Select>
@@ -212,7 +254,12 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
 
           {type === 'meal' && (
             <FormField label="User">
-              <Select name="userId" value={formData.userId || (isEditing ? '' : 'all')} onChange={handleInputChange}>
+              <Select 
+                name="userId" 
+                value={formData.userId || (isEditing ? '' : 'all')} 
+                onChange={handleInputChange}
+                autoFocus={type === 'meal'}
+              >
                 {type === 'meal' && !isEditing && <option value="all">All Users</option>}
                 {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
               </Select>
@@ -228,6 +275,7 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
                   onChange={handleInputChange} 
                   required 
                   trailingIcon={<CalendarIcon />}
+                  autoComplete="off"
                 />
               </FormField>
           )}
@@ -238,12 +286,13 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
                 <Input
                   type="number"
                   name="mealCount"
-                  value={formData.mealCount ?? ''}
+                  value={String(formData.mealCount ?? '')}
                   onChange={handleInputChange}
                   placeholder="0"
                   min="1"
                   step="1"
                   inputMode="numeric"
+                  autoComplete="off"
                 />
               </FormField>
             ) : (
@@ -276,18 +325,27 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
                <Input
                   type="text"
                   name="amount"
-                  value={formData.amount ?? ''}
+                  value={String(formData.amount ?? '')}
                   onChange={handleInputChange}
                   placeholder="0.00"
                   inputMode="decimal"
                   leadingIcon={<span className="text-gray-500 sm:text-sm font-black">৳</span>}
+                  autoComplete="off"
                 />
             </FormField>
           )}
           
           {type === 'expense' && (
             <FormField label="Description">
-              <Input type="text" name="description" value={formData.description || ''} onChange={handleInputChange} placeholder="e.g., Groceries, Rent" required />
+              <Input 
+                type="text" 
+                name="description" 
+                value={formData.description || ''} 
+                onChange={handleInputChange} 
+                placeholder="e.g., Groceries, Rent" 
+                required 
+                autoComplete="off"
+              />
             </FormField>
           )}
 
