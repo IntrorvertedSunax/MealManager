@@ -13,6 +13,8 @@ import {
   HomeIcon, UserGroupIcon, ClipboardListIcon, CalendarIcon, ReceiptIcon, CurrencyBangladeshiIcon,
   MenuIcon, XIcon, PlusIcon, UserPlusIcon, SearchIcon
 } from './components/ui/Icons';
+import { Input } from './components/forms/FormControls';
+import Button from './components/ui/Button';
 import { calculateMetrics } from './logic';
 import * as db from './data';
 
@@ -251,21 +253,104 @@ const App: React.FC = () => {
     );
   };
   
-  const MembersPage = () => (
-     <div className="bg-white p-6 rounded-lg shadow-md">
-       <h2 className="text-xl font-bold text-gray-700 mb-4">All Members</h2>
-       <div className="space-y-3">
-         {users.map(user => 
-            <MemberCard 
-              key={user.id} 
-              user={user} 
-              onEdit={() => openSheet('user', user)}
-              onRemove={() => confirmRemoveUser(user)} 
-            />
-          )}
-       </div>
-     </div>
-  );
+  const handleAddUser = (name: string): boolean => {
+    try {
+        const newUser = db.addUser({ name });
+        setUsers(prev => [...prev, newUser].sort((a, b) => a.name.localeCompare(b.name)));
+        toast.success('Success!', `${newUser.name} added successfully.`);
+        return true;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : `An unknown error occurred.`;
+        toast.error('Error!', message);
+        return false;
+    }
+  };
+
+  const MembersPage = () => {
+    const [newUserName, setNewUserName] = useState('');
+    const [error, setError] = useState('');
+    const [isAdding, setIsAdding] = useState(false);
+
+    const validateName = (name: string): string => {
+        const normalizedName = name?.trim().replace(/\s+/g, ' ');
+        if (!normalizedName) return ''; // No error for empty input until submission attempt
+        const lowercasedName = normalizedName.toLowerCase();
+        const isDuplicate = users.some(user => user.name.toLowerCase() === lowercasedName);
+        return isDuplicate ? 'Member already exists!' : '';
+    };
+
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const name = e.target.value;
+        setNewUserName(name);
+        setError(validateName(name));
+    };
+
+    const handleAddSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const trimmedName = newUserName.trim();
+        if (!trimmedName) {
+            setError('Member name is required.');
+            return;
+        }
+        const currentError = validateName(trimmedName);
+        if (currentError) {
+            setError(currentError);
+            return;
+        }
+        setIsAdding(true);
+        const success = handleAddUser(trimmedName);
+        if (success) {
+            setNewUserName('');
+            setError('');
+        }
+        setIsAdding(false);
+    };
+
+    const canSubmit = newUserName.trim() !== '' && !error && !isAdding;
+
+    return (
+        <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
+            <div>
+                <h2 className="text-xl font-bold text-gray-700 mb-4">Add New Member</h2>
+                <form onSubmit={handleAddSubmit} className="flex items-start gap-2">
+                    <div className="flex-grow">
+                        <Input
+                            autoFocus
+                            type="text"
+                            name="name"
+                            placeholder="Enter member's name"
+                            value={newUserName}
+                            onChange={handleNameChange}
+                            aria-label="New member name"
+                        />
+                        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+                    </div>
+                    <Button type="submit" disabled={!canSubmit} className="py-2.5">
+                        {isAdding ? 'Adding...' : 'Add'}
+                    </Button>
+                </form>
+            </div>
+            <hr className="border-gray-100"/>
+            <div>
+                <h2 className="text-xl font-bold text-gray-700 mb-4">All Members</h2>
+                <div className="space-y-3">
+                    {users.length === 0 ? (
+                        <p className="text-gray-500 text-center py-4">No members yet. Add one above to get started!</p>
+                    ) : (
+                        users.map(user =>
+                            <MemberCard
+                                key={user.id}
+                                user={user}
+                                onEdit={() => openSheet('user', user)}
+                                onRemove={() => confirmRemoveUser(user)}
+                            />
+                        )
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+  };
 
   const createTransactionPage = (title: string, type: TransactionType) => () => (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -408,7 +493,7 @@ const App: React.FC = () => {
   
   const pageConfig = {
     home: { title: 'Meal Management', component: HomePage, fab: { icon: <PlusIcon/>, action: () => setIsAddMenuOpen(true) } },
-    members: { title: 'Members', component: MembersPage, fab: { icon: <UserPlusIcon />, action: () => openSheet('user') } },
+    members: { title: 'Members', component: MembersPage, fab: null },
     expenses: { title: 'All Expenses', component: ExpensesPage, fab: { icon: <PlusIcon/>, action: createOpenTransactionSheetHandler('expense') } },
     deposits: { title: 'All Deposits', component: DepositsPage, fab: { icon: <PlusIcon/>, action: createOpenTransactionSheetHandler('deposit') } },
     transactions: { title: 'Transaction History', component: TransactionsPage, fab: null },

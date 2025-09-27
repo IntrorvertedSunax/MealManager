@@ -2,24 +2,19 @@ import { User, Transaction, DB } from './types';
 
 const DB_KEY = 'meal-management-db';
 
-// The initial empty state for the database.
-const initialDb: DB = {
-  users: [],
-  transactions: [],
-};
-
 // --- Helper Functions ---
 
 /**
- * Capitalizes the first letter of each word in a string.
- * e.g., "john doe" -> "John Doe"
+ * Capitalizes the first letter of each word in a string and normalizes whitespace.
+ * e.g., "  john  doe  " -> "John Doe"
  * @param str - The input string.
- * @returns The capitalized string.
+ * @returns The capitalized and normalized string.
  */
 const capitalizeWords = (str: string): string => {
   if (!str) return '';
   return str
     .trim()
+    .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
@@ -29,17 +24,24 @@ const capitalizeWords = (str: string): string => {
 
 /**
  * Retrieves the entire database from localStorage.
- * If no data is found or an error occurs, it returns the initial empty DB.
+ * If no data is found or an error occurs, it returns a fresh, empty DB structure
+ * to prevent mutation of a shared initial state.
  * @returns The database object (DB).
  */
 export const getDb = (): DB => {
   try {
     const data = localStorage.getItem(DB_KEY);
-    return data ? JSON.parse(data) : initialDb;
+    if (data) {
+      return JSON.parse(data);
+    }
   } catch (error) {
     console.error("Failed to read from localStorage", error);
-    return initialDb;
   }
+  // Return a new object to prevent shared state mutations on first load.
+  return {
+    users: [],
+    transactions: [],
+  };
 };
 
 /**
@@ -57,13 +59,17 @@ const saveDb = (db: DB): void => {
 // --- High-level CRUD functions ---
 
 /**
- * Adds a new user to the database with a capitalized name.
+ * Adds a new user to the database with a capitalized and normalized name.
  * @param userData - The user data to add (without an ID).
  * @returns The newly created user with an ID.
  */
 export const addUser = (userData: Omit<User, 'id' | 'avatarUrl'>): User => {
   const db = getDb();
   const capitalizedName = capitalizeWords(userData.name);
+
+  if (!capitalizedName) {
+    throw new Error('User name cannot be empty.');
+  }
   
   if (db.users.some(u => u.name.toLowerCase() === capitalizedName.toLowerCase())) {
     throw new Error('Member already exists!');
@@ -80,13 +86,17 @@ export const addUser = (userData: Omit<User, 'id' | 'avatarUrl'>): User => {
 };
 
 /**
- * Updates an existing user in the database with a capitalized name.
+ * Updates an existing user in the database with a capitalized and normalized name.
  * @param updatedUserData - The user data to update.
  * @returns The updated user.
  */
 export const updateUser = (updatedUserData: User): User => {
     const db = getDb();
     const capitalizedName = capitalizeWords(updatedUserData.name);
+
+    if (!capitalizedName) {
+      throw new Error('User name cannot be empty.');
+    }
 
     if (db.users.some(u => u.name.toLowerCase() === capitalizedName.toLowerCase() && u.id !== updatedUserData.id)) {
         throw new Error('Member already exists!');

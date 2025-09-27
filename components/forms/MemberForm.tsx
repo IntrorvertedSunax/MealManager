@@ -17,22 +17,17 @@ const MemberForm: React.FC<MemberFormProps> = ({ data, onSubmit, isSubmitting, u
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateName = (name: string): string | null => {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
+    const normalizedName = name?.trim().replace(/\s+/g, ' ');
+    if (!normalizedName) {
       return 'Member name is required.';
     }
-    const lowercasedName = trimmedName.toLowerCase();
+    const lowercasedName = normalizedName.toLowerCase();
     
-    // Check if another user (not the one being edited) already has this name.
-    const isDuplicate = users.some((user) => {
-      // When editing, we should not compare the user with themselves.
-      if (isEditing && user.id === data?.id) {
-        return false;
-      }
-      // For all other users (or when adding a new one), check for a name match.
-      return user.name.toLowerCase() === lowercasedName;
-    });
-
+    // Since user.name from the DB is already normalized by the logic in data.ts,
+    // we can perform a direct comparison.
+    const isDuplicate = users.some(
+      (user) => user.name.toLowerCase() === lowercasedName && user.id !== data?.id
+    );
     if (isDuplicate) {
       return 'Member already exists!';
     }
@@ -59,10 +54,16 @@ const MemberForm: React.FC<MemberFormProps> = ({ data, onSubmit, isSubmitting, u
     e.preventDefault();
     if (isSubmitting) return;
 
-    // The final, authoritative validation is handled by the data layer (data.ts).
-    // This component's responsibility is to capture input and provide real-time feedback.
-    // The check on submit is removed to avoid redundant logic.
-    onSubmit({ ...formData, name: formData.name?.trim() });
+    const error = validateName(formData.name || '');
+    if (error) {
+      setErrors({ name: error });
+      toast.error('Validation Error', error);
+      return;
+    }
+
+    setErrors({});
+    // The name will be fully normalized by the `addUser` function in `data.ts`.
+    onSubmit(formData);
   };
 
   const hasError = !!errors.name;
