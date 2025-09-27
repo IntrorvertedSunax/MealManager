@@ -274,7 +274,7 @@ const App: React.FC = () => {
           .filter(t => t.type === 'meal' && t.userId === filteredUser.id)
           .map(t => ({
             ...t,
-            id: `meal-cost-${t.id}`, // Make ID unique to avoid key conflicts
+            id: `meal-cost-${t.id}-${Date.now()}-${Math.random()}`, // Make ID unique to avoid key conflicts
             type: 'expense' as const,
             amount: (t.mealCount ?? 0) * calculations.mealRate,
             description: `${t.mealCount} Meal(s) Cost`
@@ -289,6 +289,17 @@ const App: React.FC = () => {
         // For general history, filter out raw meal entries
         baseTransactions = sortedTransactions.filter(t => t.type !== 'meal');
       }
+      
+      // Ensure all transaction IDs are unique to prevent React key conflicts
+      const seenIds = new Set<string>();
+      baseTransactions = baseTransactions.filter(transaction => {
+        if (seenIds.has(transaction.id)) {
+          return false;
+        }
+        seenIds.add(transaction.id);
+        return true;
+      });
+      
       return baseTransactions;
     }, [filteredUser, sortedTransactions, calculations.mealRate]);
   
