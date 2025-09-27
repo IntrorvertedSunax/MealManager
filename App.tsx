@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-// FIX: Import ModalType to resolve 'Cannot find name' error.
 import { User, Transaction, TransactionType, Page, ModalConfig, AlertDialogConfig, ModalType } from './types';
 import Header from './components/Header';
 import FlatmateBalanceCard from './components/FlatmateBalanceCard';
@@ -7,58 +6,45 @@ import MemberCard from './components/MemberCard';
 import FormSheet from './components/FormSheet';
 import TransactionListItem from './components/TransactionHistory';
 import AlertDialog from './components/AlertDialog';
-import AddMenuSheet from './components/AddMenuSheet'; // Import the new menu sheet
+import AddMenuSheet from './components/AddMenuSheet';
+import DashboardCard from './components/DashboardCard';
 import { toast } from './components/Toaster';
 import { 
   HomeIcon, UserGroupIcon, ClipboardListIcon, CalendarIcon, ReceiptIcon, CurrencyBangladeshiIcon,
   MenuIcon, XIcon, PlusIcon, UserPlusIcon, SearchIcon
 } from './components/Icons';
+import { calculateMetrics } from './logic';
+import * as db from './data';
 
 const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [page, setPage] = useState<Page>('home');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false); // State for the main "Add New" menu
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [sheetConfig, setSheetConfig] = useState<ModalConfig>({ isOpen: false, type: null, data: null });
   const [alertDialog, setAlertDialog] = useState<AlertDialogConfig>({ isOpen: false, title: '', description: '', onConfirm: () => {} });
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Load data from localStorage on initial component mount
   useEffect(() => {
-    // Clear search when user context changes on the history page
+    const { users: storedUsers, transactions: storedTransactions } = db.getDb();
+    setUsers(storedUsers);
+    setTransactions(storedTransactions);
+  }, []);
+  
+  useEffect(() => {
     setSearchQuery('');
   }, [filterUserId]);
 
-  // --- Calculations ---
-  const calculations = useMemo(() => {
-    const expenses = transactions.filter(t => t.type === 'expense');
-    const deposits = transactions.filter(t => t.type === 'deposit');
-    const meals = transactions.filter(t => t.type === 'meal');
-
-    const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
-    const totalDeposits = deposits.reduce((sum, t) => sum + t.amount, 0);
-    const totalMealCount = meals.reduce((sum, t) => sum + (t.mealCount ?? 0), 0);
-    const mealRate = totalMealCount > 0 ? totalExpenses / totalMealCount : 0;
-    const remainingBalance = totalDeposits - totalExpenses;
-
-    const userData = users.map(user => {
-      const userDeposits = deposits.filter(t => t.userId === user.id).reduce((sum, t) => sum + t.amount, 0);
-      const userExpensesPaid = expenses.filter(t => t.userId === user.id).reduce((sum, t) => sum + t.amount, 0);
-      const userMealCount = meals.filter(t => t.userId === user.id).reduce((sum, t) => sum + (t.mealCount ?? 0), 0);
-      const userMealCost = userMealCount * mealRate;
-      const balance = userDeposits - userMealCost;
-      return { user, userDeposits, userExpensesPaid, userMealCount, userMealCost, balance };
-    });
-
-    return { totalExpenses, totalDeposits, totalMealCount, mealRate, remainingBalance, userData };
-  }, [users, transactions]);
+  const calculations = useMemo(() => calculateMetrics(users, transactions), [users, transactions]);
 
   const sortedTransactions = useMemo(() => 
     [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   [transactions]);
 
-  // --- Handlers ---
   const handleNavigate = (newPage: Page, userId: string | null = null) => {
     setPage(newPage);
     setFilterUserId(userId);
@@ -73,26 +59,74 @@ const App: React.FC = () => {
 
   const closeAlertDialog = () => setAlertDialog({ ...alertDialog, isOpen: false });
   
-  const handleEntrySubmit = (entry: any, type: ModalType) => {
-    const isEditing = sheetConfig.data?.id;
+  const handleEntrySubmit = (entry: Partial<User & Transaction>, type: ModalType) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    const isEditing = !!entry.id;
     try {
         if (type === 'user') {
-            if(isEditing) {
-                setUsers(users.map(u => u.id === entry.id ? entry : u));
+            const userEntry = entry as Partial<User>;
+            if (!userEntry.name?.trim()) throw new Error('User name cannot be empty.');
+            
+            if (isEditing) {
+                const updatedUser = db.updateUser({ ...users.find(u => u.id === userEntry.id), ...userEntry } as User);
+                setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
             } else {
-                setUsers([...users, { ...entry, id: Date.now().toString() }]);
+                const newUser = db.addUser({ name: userEntry.name.trim() });
+                setUsers(prev => [...prev, newUser]);
             }
-        } else {
-            if(isEditing) {
-                setTransactions(transactions.map(t => t.id === entry.id ? entry : t));
+        } else { // Transaction types
+            const txEntry = entry as Partial<Transaction> & { date: string };
+            
+            if (!txEntry.userId) throw new Error('A user must be selected.');
+            if (type !== 'meal' && (!txEntry.amount || txEntry.amount <= 0)) throw new Error('Amount must be greater than 0.');
+
+            if (type === 'meal' && txEntry.userId === 'all') {
+                if (isEditing) throw new Error("Cannot edit a meal entry for 'All' users.");
+                if (!users.length) throw new Error("There are no users to add meals for.");
+
+                const newTransactions: Transaction[] = [];
+                users.forEach(user => {
+                  const newMeal = db.addTransaction({
+                      type: 'meal',
+                      userId: user.id,
+                      date: new Date(txEntry.date).toISOString(),
+                      amount: 0,
+                      description: txEntry.description || `${txEntry.mealCount || 0} meal(s)`,
+                      mealCount: txEntry.mealCount || 0,
+                  });
+                  newTransactions.push(newMeal);
+                });
+                setTransactions(prev => [...prev, ...newTransactions]);
+
             } else {
-                setTransactions([...transactions, { ...entry, id: Date.now().toString(), date: new Date().toISOString() }]);
+                if (isEditing) {
+                    const existingTx = transactions.find(t => t.id === txEntry.id);
+                    if (!existingTx) throw new Error("Transaction not found for editing.");
+                    const updatedTransaction = db.updateTransaction({ ...existingTx, ...txEntry });
+                    setTransactions(transactions.map(t => t.id === updatedTransaction.id ? updatedTransaction : t));
+                } else {
+                    const newTransactionData: Omit<Transaction, 'id'> = {
+                        type: type as TransactionType,
+                        userId: txEntry.userId as string,
+                        date: new Date(txEntry.date || new Date()).toISOString(),
+                        amount: txEntry.amount || 0,
+                        description: txEntry.description?.trim() || '',
+                        mealCount: txEntry.mealCount || 0,
+                    };
+                    const newTransaction = db.addTransaction(newTransactionData);
+                    setTransactions(prev => [...prev, newTransaction]);
+                }
             }
         }
         toast.success('Success!', `${type.charAt(0).toUpperCase() + type.slice(1)} ${isEditing ? 'updated' : 'added'} successfully.`);
         closeSheet();
     } catch (error) {
-        toast.error('Error!', `Failed to ${isEditing ? 'update' : 'add'} ${type}.`);
+        const message = error instanceof Error ? error.message : `An unknown error occurred.`;
+        toast.error('Error!', message);
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -102,6 +136,7 @@ const App: React.FC = () => {
       title: `Remove ${user.name}?`,
       description: `This will permanently remove ${user.name} and all their associated data. This action cannot be undone.`,
       onConfirm: () => {
+        db.deleteUser(user.id);
         setUsers(users.filter(u => u.id !== user.id));
         setTransactions(transactions.filter(t => t.userId !== user.id));
         toast.success('User Removed', `${user.name} has been removed.`);
@@ -116,6 +151,7 @@ const App: React.FC = () => {
       title: `Delete this ${transaction.type}?`,
       description: `Are you sure you want to delete this ${transaction.type}? This action cannot be undone.`,
       onConfirm: () => {
+        db.deleteTransaction(transaction.id);
         setTransactions(transactions.filter(t => t.id !== transaction.id));
         toast.success('Deleted', `The ${transaction.type} has been deleted.`);
         closeAlertDialog();
@@ -123,42 +159,84 @@ const App: React.FC = () => {
     });
   };
   
-  // Handler for the main "Add New" menu
   const handleSelectAddType = (type: ModalType) => {
     setIsAddMenuOpen(false);
-    // Use a short timeout to allow the close animation of the first sheet to finish
     setTimeout(() => {
+      if (type !== 'user' && users.length === 0) {
+        toast.error('No Members Found', 'Please add a member before logging a transaction.');
+        return;
+      }
       openSheet(type);
     }, 300);
   };
-  
 
-  // --- Page Components ---
-  const HomePage = () => (
-    <div className="space-y-6">
-      <div className="bg-blue-500 text-white p-6 rounded-xl shadow-lg text-center">
-        <p className="font-medium text-lg">Current Meal Rate</p>
-        <p className="text-5xl font-bold tracking-tight"><span className="font-black">৳</span>{calculations.mealRate.toFixed(2)}</p>
-      </div>
-      <div className="grid grid-cols-3 gap-4 text-center">
-        <div className="bg-white p-4 rounded-lg shadow"><p className="text-sm text-gray-500">Meals</p><p className="text-2xl font-bold">{calculations.totalMealCount}</p></div>
-        <div className="bg-white p-4 rounded-lg shadow"><p className="text-sm text-gray-500">Deposits</p><p className="text-2xl font-bold"><span className="font-black">৳</span>{calculations.totalDeposits}</p></div>
-        <div className="bg-white p-4 rounded-lg shadow"><p className="text-sm text-gray-500">Expenses</p><p className="text-2xl font-bold"><span className="font-black">৳</span>{calculations.totalExpenses}</p></div>
-      </div>
-      <div className="bg-gray-100 p-4 rounded-lg shadow-inner text-center">
-        <p className="text-gray-600 font-medium">Remaining Balance</p>
-        <p className="text-3xl font-bold text-gray-800"><span className="font-black">৳</span>{calculations.remainingBalance.toFixed(2)}</p>
-      </div>
-      <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Flatmate Balances</h2>
-        <div className="space-y-4">
-          {calculations.userData.map(data => (
-            <FlatmateBalanceCard key={data.user.id} user={data.user} balance={data.balance} mealCount={data.userMealCount} totalDeposit={data.userDeposits} totalExpenses={data.userMealCost} onHistoryClick={() => handleNavigate('transactions', data.user.id)} />
-          ))}
+  const createOpenTransactionSheetHandler = (type: 'meal' | 'expense' | 'deposit') => () => {
+    if (users.length === 0) {
+      toast.error('No Members Found', 'Please add a member before logging a transaction.');
+      return;
+    }
+    openSheet(type);
+  };
+  
+  const HomePage = () => {
+    const dayCount = useMemo(() => {
+      const mealTransactions = transactions.filter(t => t.type === 'meal');
+      if (mealTransactions.length === 0) return 0;
+
+      const firstDate = new Date(Math.min(...mealTransactions.map(t => new Date(t.date).getTime())));
+      const today = new Date();
+      
+      firstDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      
+      const diffTime = today.getTime() - firstDate.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      
+      return diffDays + 1;
+    }, [transactions]);
+
+    const currentDate = new Date().toLocaleString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-center">
+          <div className="bg-white rounded-xl shadow-md flex items-stretch overflow-hidden">
+            <div className="bg-gray-100 py-2 px-4 flex flex-col items-center justify-center">
+              <p className="text-xs font-bold text-gray-500">Day</p>
+              <p className="text-3xl font-bold text-gray-800">{dayCount}</p>
+            </div>
+            <div className="flex items-center p-3 px-5">
+              <p className="font-semibold text-gray-700 text-lg">{currentDate}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-blue-500 text-white p-5 rounded-2xl shadow-lg text-center">
+          <p className="font-medium text-base text-blue-100">Current Meal Rate</p>
+          <p className="text-5xl font-bold tracking-tight"><span className="font-black">৳</span>{calculations.mealRate.toFixed(2)}</p>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-4">
+            <DashboardCard title="Meals" value={calculations.totalMealCount} />
+            <DashboardCard title="Deposits" value={calculations.totalDeposits} formatAs="currency" />
+            <DashboardCard title="Expenses" value={calculations.totalExpenses} formatAs="currency" />
+        </div>
+
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Flatmate Balances</h2>
+          <div className="space-y-4">
+            {calculations.userData.map(data => (
+              <FlatmateBalanceCard key={data.user.id} user={data.user} balance={data.balance} mealCount={data.userMealCount} totalDeposit={data.userDeposits} totalExpenses={data.userMealCost} onHistoryClick={() => handleNavigate('transactions', data.user.id)} />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
   
   const MembersPage = () => (
      <div className="bg-white p-6 rounded-lg shadow-md">
@@ -185,47 +263,56 @@ const App: React.FC = () => {
 
   const TransactionsPage = () => {
     const filteredUser = filterUserId ? users.find(u => u.id === filterUserId) : null;
+    const userBalanceData = filteredUser ? calculations.userData.find(d => d.user.id === filteredUser.id) : null;
   
     const transactionsToDisplay = useMemo(() => {
+      let baseTransactions = sortedTransactions;
+
       if (filteredUser) {
-        const userMealCosts = sortedTransactions
+        // Create virtual expense transactions for meals for the specific user
+        const userMealCostsAsExpenses = baseTransactions
           .filter(t => t.type === 'meal' && t.userId === filteredUser.id)
           .map(t => ({
             ...t,
+            id: `meal-cost-${t.id}`, // Make ID unique to avoid key conflicts
             type: 'expense' as const,
             amount: (t.mealCount ?? 0) * calculations.mealRate,
-            description: `${t.mealCount} Meals Cost`
+            description: `${t.mealCount} Meal(s) Cost`
           }));
-  
-        return [...sortedTransactions.filter(t => t.userId === filteredUser.id && t.type !== 'meal'), ...userMealCosts]
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        baseTransactions = [
+            ...baseTransactions.filter(t => t.userId === filteredUser.id && t.type !== 'meal'), 
+            ...userMealCostsAsExpenses
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      } else {
+        // For general history, filter out raw meal entries
+        baseTransactions = sortedTransactions.filter(t => t.type !== 'meal');
       }
-      // For general history, don't show raw meal entries
-      return sortedTransactions.filter(t => t.type !== 'meal');
+      return baseTransactions;
     }, [filteredUser, sortedTransactions, calculations.mealRate]);
   
     const allItemsWithRunningBalance = useMemo(() => {
       const finalBalance = filterUserId
         ? calculations.userData.find(d => d.user.id === filterUserId)?.balance ?? 0
         : calculations.remainingBalance;
-  
+
       let currentBalance = finalBalance;
-  
-      return transactionsToDisplay.map(transaction => {
-        const balanceToShow = currentBalance;
-  
+      const itemsWithBalance: { transaction: Transaction; runningBalance: number }[] = [];
+
+      for (const transaction of transactionsToDisplay) {
+        itemsWithBalance.push({ transaction, runningBalance: currentBalance });
         if (transaction.type === 'deposit') {
           currentBalance -= transaction.amount;
         } else if (transaction.type === 'expense') {
           currentBalance += transaction.amount;
         }
-  
-        return { transaction, runningBalance: balanceToShow };
-      });
+      }
+      return itemsWithBalance;
     }, [transactionsToDisplay, filterUserId, calculations]);
   
     const searchedItemsWithRunningBalance = useMemo(() => {
-      if (!searchQuery) {
+      if (!searchQuery.trim()) {
         return allItemsWithRunningBalance;
       }
       const lowercasedQuery = searchQuery.toLowerCase();
@@ -233,58 +320,66 @@ const App: React.FC = () => {
       return allItemsWithRunningBalance.filter(({ transaction: t }) => {
         const user = users.find(u => u.id === t.userId);
         const userName = user ? user.name.toLowerCase() : '';
-  
-        if (t.type === 'deposit') {
-          return userName.includes(lowercasedQuery);
-        }
-  
-        if (t.type === 'expense') {
-          const description = t.description ? t.description.toLowerCase() : '';
-          return description.includes(lowercasedQuery) || userName.includes(lowercasedQuery);
-        }
-        return false;
+        const description = t.description ? t.description.toLowerCase() : '';
+        
+        return userName.includes(lowercasedQuery) || description.includes(lowercasedQuery);
       });
     }, [searchQuery, allItemsWithRunningBalance, users]);
   
     return (
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-bold text-gray-700 mb-4">
-          {filteredUser ? `Transaction History for ${filteredUser.name}` : 'Transaction History'}
-          {filteredUser && <button onClick={() => setFilterUserId(null)} className="ml-4 text-sm font-normal text-green-600 hover:underline">(Show All)</button>}
-        </h2>
-  
-        <div className="mb-4 relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            <SearchIcon />
-          </div>
-          <input
-            type="text"
-            placeholder="Search by description or name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            aria-label="Search transactions"
-          />
+      <div className="space-y-4">
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-bold text-gray-700">
+            {filteredUser ? `Transaction History for ${filteredUser.name}` : 'Transaction History'}
+            {filteredUser && <button onClick={() => setFilterUserId(null)} className="ml-4 text-sm font-normal text-green-600 hover:underline">(Show All)</button>}
+          </h2>
         </div>
+        
+        {userBalanceData && (
+          <div className="bg-white p-4 rounded-lg shadow-md flex justify-between items-center">
+             <h3 className="font-semibold text-gray-600">Current Balance</h3>
+             <p className={`font-bold text-2xl ${userBalanceData.balance >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                {userBalanceData.balance < 0 && '-'}<span className="font-black">৳</span>{Math.abs(userBalanceData.balance).toFixed(2)}
+             </p>
+          </div>
+        )}
   
-        <ul className="space-y-4">
-          {transactionsToDisplay.length === 0 ? (
-            <li className="text-center text-gray-500 py-8">No transactions to display.</li>
-          ) : searchedItemsWithRunningBalance.length === 0 ? (
-            <li className="text-center text-gray-500 py-8">No results for "{searchQuery}"</li>
-          ) : (
-            searchedItemsWithRunningBalance.map(({ transaction, runningBalance }) => (
-              <TransactionListItem
-                key={transaction.id}
-                transaction={transaction}
-                users={users}
-                onEdit={() => openSheet(transaction.type, transaction)}
-                onDelete={() => confirmRemoveTransaction(transaction)}
-                runningBalance={runningBalance}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="mb-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <SearchIcon />
+              </div>
+              <input
+                type="text"
+                placeholder="Search by description or name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                aria-label="Search transactions"
               />
-            ))
-          )}
-        </ul>
+            </div>
+          </div>
+    
+          <ul className="space-y-4">
+            {transactionsToDisplay.length === 0 ? (
+              <li className="text-center text-gray-500 py-8">No transactions to display.</li>
+            ) : searchedItemsWithRunningBalance.length === 0 ? (
+              <li className="text-center text-gray-500 py-8">No results for "{searchQuery}"</li>
+            ) : (
+              searchedItemsWithRunningBalance.map(({ transaction, runningBalance }) => (
+                <TransactionListItem
+                  key={transaction.id}
+                  transaction={transaction}
+                  users={users}
+                  onEdit={() => openSheet(transaction.type, transaction)}
+                  onDelete={() => confirmRemoveTransaction(transaction)}
+                  runningBalance={runningBalance}
+                />
+              ))
+            )}
+          </ul>
+        </div>
       </div>
     );
   };
@@ -294,8 +389,8 @@ const App: React.FC = () => {
   const pageConfig = {
     home: { title: 'Meal Management', component: HomePage, fab: { icon: <PlusIcon/>, action: () => setIsAddMenuOpen(true) } },
     members: { title: 'Members', component: MembersPage, fab: { icon: <UserPlusIcon />, action: () => openSheet('user') } },
-    expenses: { title: 'All Expenses', component: ExpensesPage, fab: { icon: <PlusIcon/>, action: () => openSheet('expense') } },
-    deposits: { title: 'All Deposits', component: DepositsPage, fab: { icon: <PlusIcon/>, action: () => openSheet('deposit') } },
+    expenses: { title: 'All Expenses', component: ExpensesPage, fab: { icon: <PlusIcon/>, action: createOpenTransactionSheetHandler('expense') } },
+    deposits: { title: 'All Deposits', component: DepositsPage, fab: { icon: <PlusIcon/>, action: createOpenTransactionSheetHandler('deposit') } },
     transactions: { title: 'Transaction History', component: TransactionsPage, fab: null },
     calendar: { title: 'Calendar', component: CalendarPage, fab: null },
   };
@@ -357,7 +452,10 @@ const App: React.FC = () => {
     <div className="flex h-screen font-sans bg-gray-50">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title={pageConfig[page].title} onOpenMenu={() => setIsMenuOpen(true)} />
+        <Header 
+          title={pageConfig[page].title} 
+          onOpenMenu={() => setIsMenuOpen(true)}
+        />
         <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-20 md:pb-8">
           <div key={page} className="max-w-4xl mx-auto fade-in">
             <ActivePage />
@@ -372,10 +470,12 @@ const App: React.FC = () => {
         onSelect={handleSelectAddType}
       />
       <FormSheet
+        key={sheetConfig.type + '-' + (sheetConfig.data?.id || 'new')}
         config={sheetConfig}
         onClose={closeSheet}
         onSubmit={handleEntrySubmit}
         users={users}
+        isSubmitting={isSubmitting}
       />
        <AlertDialog
         config={alertDialog}

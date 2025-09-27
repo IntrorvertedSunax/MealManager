@@ -16,6 +16,11 @@ export interface Transaction {
   mealCount?: number; // Only for 'meal' type
 }
 
+export interface DB {
+  users: User[];
+  transactions: Transaction[];
+}
+
 export type Page = 'home' | 'members' | 'expenses' | 'deposits' | 'transactions' | 'calendar';
 
 export type ModalType = TransactionType | 'user';

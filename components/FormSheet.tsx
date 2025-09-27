@@ -1,84 +1,178 @@
-import React, { useState, useEffect } from 'react';
-import { User, ModalConfig, ModalType } from '../types';
-import { XIcon, CalendarIcon } from './Icons';
+import React, { useState } from 'react';
+import { User, ModalConfig, ModalType, Transaction } from '../types';
+import { XIcon, CalendarIcon, SwitchVerticalIcon } from './Icons';
+import { toast } from './Toaster';
+import Button from './Button';
 
 interface FormSheetProps {
   config: ModalConfig;
   onClose: () => void;
-  onSubmit: (data: any, type: ModalType) => void;
+  onSubmit: (data: Partial<User & Transaction>, type: ModalType) => void;
   users: User[];
+  isSubmitting: boolean;
 }
 
-const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users }) => {
+// A reusable Input component to standardize input fields.
+const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { leadingIcon?: React.ReactNode, trailingIcon?: React.ReactNode }> = ({ leadingIcon, trailingIcon, className, ...props }) => {
+  const baseStyles = "w-full py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition";
+  const paddingClasses = `${leadingIcon ? 'pl-8' : 'pl-3'} ${trailingIcon ? 'pr-10' : 'pr-3'}`;
+  
+  return (
+    <div className="relative">
+      {leadingIcon && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+          {leadingIcon}
+        </div>
+      )}
+      <input {...props} className={`${baseStyles} ${paddingClasses} ${className || ''}`} />
+      {trailingIcon && (
+        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
+          {trailingIcon}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const Select: React.FC<React.SelectHTMLAttributes<HTMLSelectElement> & { children: React.ReactNode }> = ({ className, children, ...props }) => {
+  return (
+    <div className="relative">
+      <select 
+        {...props} 
+        className={`w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition ${className || ''}`}
+      >
+        {children}
+      </select>
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+        <SwitchVerticalIcon />
+      </div>
+    </div>
+  );
+};
+
+
+const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users, isSubmitting }) => {
   const { isOpen, type, data } = config;
-  const [formData, setFormData] = useState<any>({});
-  const [mealChecks, setMealChecks] = useState({ breakfast: false, lunch: false, dinner: false });
-  const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!data;
 
-  useEffect(() => {
-    if (isOpen) {
-      const today = new Date();
-      // Format to YYYY-MM-DD for the date input
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      
-      setFormData(data || { date: `${yyyy}-${mm}-${dd}` });
-      // FIX: Add a type guard to ensure `data` is a `Transaction` before accessing `mealCount`.
-      // The `in` operator checks for the property and narrows the type.
-      if(type === 'meal' && data && 'mealCount' in data && data.mealCount) {
-        setMealChecks({ breakfast: data.mealCount >= 1, lunch: data.mealCount >= 2, dinner: data.mealCount >= 3});
-      } else {
-        setMealChecks({ breakfast: true, lunch: true, dinner: true });
+  const [formData, setFormData] = useState<any>(() => {
+    if (isEditing) {
+      const formDataToSet = { ...data };
+      if ('date' in formDataToSet && formDataToSet.date) {
+        formDataToSet.date = new Date(formDataToSet.date).toISOString().split('T')[0];
       }
+      if ('amount' in formDataToSet && formDataToSet.amount !== undefined) {
+        formDataToSet.amount = String(formDataToSet.amount);
+      }
+      return formDataToSet;
     }
-  }, [isOpen, data, type]);
+    const today = new Date().toISOString().split('T')[0];
+    const defaultFormData: Partial<User & Transaction> = { date: today };
+    return defaultFormData;
+  });
+
+  const [mealChecks, setMealChecks] = useState(() => {
+    if (type === 'meal' && !isEditing) {
+      return { breakfast: true, lunch: true, dinner: true };
+    }
+    return { breakfast: false, lunch: false, dinner: false };
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const mealCount = (mealChecks.breakfast ? 1 : 0) + (mealChecks.lunch ? 1 : 0) + (mealChecks.dinner ? 1 : 0);
   
   if (!isOpen || !type) return null;
 
   const titleConfig = {
-    meal: { title: 'Add Meal', description: 'Log a meal consumed by a flatmate.' },
-    expense: { title: 'Add Expense', description: 'Log a shared expense.' },
-    deposit: { title: 'Add Deposit', description: 'Log a financial contribution from a flatmate.' },
-    user: { title: 'Add New Member', description: 'Add a new person to the group.' },
+    meal: { title: isEditing ? 'Edit Meal' : 'Add Meal', description: 'Log meals consumed by a flatmate.' },
+    expense: { title: isEditing ? 'Edit Expense' : 'Add Expense', description: 'Log a shared expense.' },
+    deposit: { title: isEditing ? 'Edit Deposit' : 'Add Deposit', description: 'Log a financial contribution.' },
+    user: { title: isEditing ? 'Edit Member' : 'Add New Member', description: 'Manage a person in the group.' },
   };
   const currentTitle = titleConfig[type];
 
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (type === 'user') {
+        if (!formData.name?.trim()) newErrors.name = 'Member name is required.';
+    } else if (type === 'expense' || type === 'deposit') {
+        if (!formData.userId) newErrors.userId = 'Please select a user.';
+        if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = 'Amount must be greater than 0.';
+    } else if (type === 'meal' && isEditing) {
+        if (!formData.mealCount || formData.mealCount <= 0) newErrors.mealCount = 'Number of meals must be greater than 0.';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    if (isSubmitting) return;
+
+    if (type === 'meal' && !isEditing && mealCount === 0) {
+        toast.error('Error!', 'Please select at least one meal.');
+        return;
+    }
+    
+    if (!validate()) {
+      toast.error('Validation Error', 'Please fix the errors in the form.');
+      return;
+    }
+
     let submissionData = { ...formData };
     if (type === 'meal') {
-      submissionData.mealCount = mealCount;
-      submissionData.description = `${mealCount} meals`;
+      const count = isEditing ? (formData.mealCount || 0) : mealCount;
+      submissionData = {
+        ...submissionData,
+        mealCount: count,
+        description: `${count} meal(s)`,
+        amount: 0,
+      };
     }
-    setTimeout(() => {
+
+    if (submissionData.amount !== undefined) {
+      submissionData.amount = parseFloat(submissionData.amount) || 0;
+    }
+    
+    if(type) {
         onSubmit(submissionData, type);
-        setIsLoading(false);
-    }, 500);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target as HTMLInputElement;
+    const { name, value, type: inputType } = e.target;
+
     if (name in mealChecks) {
-      setMealChecks(prev => ({ ...prev, [name]: checked }));
+      setMealChecks(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
     } else {
-      setFormData((prev: any) => ({ ...prev, [name]: type === 'number' ? parseFloat(value) : value }));
+      if (name === 'amount' && value && !/^\d*\.?\d*$/.test(value)) {
+          return;
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: inputType === 'number' ? (value === '' ? undefined : parseFloat(value)) : value
+      }));
+      if (errors[name]) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
     }
   };
 
-  const FormField: React.FC<{label: string, children: React.ReactNode, description?: string}> = ({label, children, description}) => (
+  const FormField: React.FC<{label: string, children: React.ReactNode, description?: string, error?: string}> = ({label, children, description, error}) => (
     <div>
         <label className="block text-sm font-medium text-gray-700">{label}</label>
         {description && <p className="text-xs text-gray-500 mb-1">{description}</p>}
         {children}
+        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
   )
-
-  const inputStyles = "w-full px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
 
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-end transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={onClose}>
@@ -95,75 +189,109 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users 
 
         <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
           {type === 'user' && (
-            <FormField label="Member Name">
-              <input type="text" name="name" value={formData.name || ''} onChange={handleInputChange} required className={inputStyles} />
+            <FormField label="Member Name" error={errors.name}>
+              <Input autoFocus type="text" name="name" value={formData.name || ''} onChange={handleInputChange} />
             </FormField>
           )}
 
-          {(type === 'expense' || type === 'deposit' || type === 'meal') && (
-            <FormField label="User">
-              <select name="userId" value={formData.userId || 'all'} onChange={handleInputChange} required className={inputStyles}>
-                {type === 'meal' && <option value="all">All</option>}
+          {(type === 'expense' || type === 'deposit') && (
+            <FormField label="User" error={errors.userId}>
+              <Select name="userId" value={formData.userId || ''} onChange={handleInputChange}>
+                <option value="" disabled>Select a user</option>
                 {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
-              </select>
+              </Select>
             </FormField>
           )}
 
           {type === 'meal' && (
+            <FormField label="User">
+              <Select name="userId" value={formData.userId || (isEditing ? '' : 'all')} onChange={handleInputChange}>
+                {type === 'meal' && !isEditing && <option value="all">All Users</option>}
+                {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
+              </Select>
+            </FormField>
+          )}
+          
+          {(type === 'expense' || type === 'deposit' || type === 'meal') && (
+              <FormField label="Date">
+                <Input 
+                  type="date" 
+                  name="date" 
+                  value={formData.date || ''} 
+                  onChange={handleInputChange} 
+                  required 
+                  trailingIcon={<CalendarIcon />}
+                />
+              </FormField>
+          )}
+
+          {type === 'meal' && (
+            isEditing ? (
+              <FormField label="Number of Meals" error={errors.mealCount}>
+                <Input
+                  type="number"
+                  name="mealCount"
+                  value={formData.mealCount ?? ''}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
+                />
+              </FormField>
+            ) : (
               <>
-                <FormField label="Date">
-                    <div className="relative">
-                        <input type="date" name="date" value={formData.date || ''} onChange={handleInputChange} required className={`${inputStyles} pr-10`} />
-                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <CalendarIcon />
-                        </div>
-                    </div>
+                <FormField label="Meals" description="Select which meals to log.">
+                  <div className="flex items-center space-x-6">
+                    {['breakfast', 'lunch', 'dinner'].map(meal => (
+                      <label key={meal} className="flex items-center space-x-2 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          name={meal} 
+                          checked={mealChecks[meal as keyof typeof mealChecks]} 
+                          onChange={handleInputChange} 
+                          className="h-5 w-5 rounded-md border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                        <span className="capitalize text-gray-700">{meal}</span>
+                      </label>
+                    ))}
+                  </div>
                 </FormField>
-                <FormField label="Meal" description="Select which meals to log.">
-                    <div className="flex items-center space-x-6">
-                        {['breakfast', 'lunch', 'dinner'].map(meal => (
-                            <label key={meal} className="flex items-center space-x-2 cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    name={meal} 
-                                    checked={mealChecks[meal as keyof typeof mealChecks]} 
-                                    onChange={handleInputChange} 
-                                    className="appearance-none h-5 w-5 border-2 border-gray-300 rounded-full checked:bg-blue-600 checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                />
-                                 <svg className="absolute w-5 h-5 -ml-5 opacity-0 checked:opacity-100 pointer-events-none" viewBox="0 0 20 20" fill="white">
-                                    <path d="M6.293 9.293a1 1 0 0 1 1.414 0L10 11.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-3 3a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 0-1.414z"/>
-                                 </svg>
-                                <span className="capitalize text-gray-700">{meal}</span>
-                            </label>
-                        ))}
-                    </div>
-                </FormField>
-                 <FormField label="Number of Meals">
-                    <input type="number" readOnly value={mealCount} className={`${inputStyles} bg-blue-50 text-gray-700 font-medium`} />
+                <FormField label="Number of Meals">
+                  <Input type="number" readOnly value={mealCount} className="bg-gray-100 text-gray-700 font-medium" />
                 </FormField>
               </>
+            )
           )}
 
           {(type === 'expense' || type === 'deposit') && (
-            <FormField label="Amount">
-              <input type="number" name="amount" value={formData.amount || ''} onChange={handleInputChange} placeholder="0.00" required min="0.01" step="0.01" className={inputStyles} />
+            <FormField label="Amount" error={errors.amount}>
+               <Input
+                  type="text"
+                  name="amount"
+                  value={formData.amount ?? ''}
+                  onChange={handleInputChange}
+                  placeholder="0.00"
+                  inputMode="decimal"
+                  leadingIcon={<span className="text-gray-500 sm:text-sm font-black">৳</span>}
+                />
             </FormField>
           )}
           
           {type === 'expense' && (
             <FormField label="Description">
-              <input type="text" name="description" value={formData.description || ''} onChange={handleInputChange} placeholder="e.g., Groceries, Rent" required className={inputStyles} />
+              <Input type="text" name="description" value={formData.description || ''} onChange={handleInputChange} placeholder="e.g., Groceries, Rent" required />
             </FormField>
           )}
 
           <div className="pt-4">
-             <button 
+             <Button 
                 type="submit"
-                disabled={isLoading}
-                className="w-full justify-center px-4 py-3 rounded-xl font-semibold text-base focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 shadow-sm bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-500 disabled:bg-orange-300"
+                disabled={isSubmitting}
+                className="w-full justify-center py-3 text-base"
              >
-                {isLoading ? 'Saving...' : `${isEditing ? 'Update' : 'Add'} ${type.charAt(0).toUpperCase() + type.slice(1)}`}
-             </button>
+                {isSubmitting ? 'Processing...' : `${isEditing ? 'Update' : 'Add'} ${type.charAt(0).toUpperCase() + type.slice(1)}`}
+             </Button>
           </div>
         </form>
       </div>

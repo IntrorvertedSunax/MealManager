@@ -1,92 +1,79 @@
 import React from 'react';
 import { Transaction, User } from '../types';
-import { PencilIcon, TrashIcon } from './Icons';
-import Badge from './Badge';
+import { PencilIcon, TrashIcon, DepositIcon, ReceiptIcon } from './Icons';
 
 interface TransactionListItemProps {
   transaction: Transaction;
   users: User[];
-  onEdit: (transaction: Transaction) => void;
-  onDelete: (transactionId: string) => void;
+  onEdit: () => void;
+  onDelete: () => void;
   runningBalance?: number;
 }
 
 const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, users, onEdit, onDelete, runningBalance }) => {
   const user = users.find(u => u.id === transaction.userId);
 
-  // Meal transactions are converted to expenses before being displayed in history lists,
-  // so we only need to handle expense and deposit types here.
   if (transaction.type === 'meal') {
     return null;
   }
 
   const isExpense = transaction.type === 'expense';
   
-  const title = isExpense ? transaction.description : user?.name || 'Unknown User';
+  const title = isExpense ? transaction.description : `Deposit from ${user?.name || 'Unknown'}`;
   const amountColor = isExpense ? 'text-red-500' : 'text-green-600';
   const sign = isExpense ? '-' : '+';
+  
+  const iconConfig = {
+    expense: { icon: <ReceiptIcon />, bg: 'bg-red-50' },
+    deposit: { icon: <DepositIcon />, bg: 'bg-green-50' },
+  };
+  const currentIcon = iconConfig[transaction.type];
 
   const formattedDate = new Date(transaction.date).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric',
-    hour12: true,
   });
 
   return (
-    <li className="bg-white p-4 rounded-xl shadow-sm border border-gray-200/80">
-      {/* Top Section */}
-      <div className="flex justify-between items-start gap-4">
-        {/* Left Side: Badge, Title, Date */}
-        <div>
-          <div className="flex items-center gap-3">
-            <Badge type={transaction.type} />
-            <h3 className="font-bold text-gray-900 text-lg capitalize">
+    <li className="p-4 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+      <div className="flex items-center justify-between gap-4">
+        {/* Left Side: Icon, Title, Subtitle */}
+        <div className="flex items-center gap-4">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${currentIcon.bg} ${amountColor}`}>
+            {currentIcon.icon}
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-800 capitalize">
               {title}
             </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {formattedDate}
+              {isExpense && ` • Paid by ${user?.name || 'Unknown'}`}
+            </p>
           </div>
-          <p className="text-sm text-gray-500 mt-1">
-            {formattedDate.replace(',', '')}
-          </p>
         </div>
         
-        {/* Right Side: Amount, "Paid by" */}
+        {/* Right Side: Amount and Running Balance */}
         <div className="text-right flex-shrink-0">
-          <p className={`font-bold text-xl ${amountColor}`}>
+          <p className={`font-bold text-lg ${amountColor}`}>
             {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(2)}
           </p>
-          {isExpense && (
-            <p className="text-sm text-gray-500">Paid by {user?.name || 'Unknown'}</p>
+          {runningBalance !== undefined && (
+            <p className="text-xs text-gray-500">
+              Balance: <span className="font-semibold">৳{runningBalance.toFixed(2)}</span>
+            </p>
           )}
         </div>
       </div>
       
-      {/* Separator */}
-      <hr className="my-3 border-gray-100" />
-      
-      {/* Bottom Section */}
-      <div className="flex justify-between items-center">
-        {/* Left Side: Balance */}
-        <div>
-          {runningBalance !== undefined && (
-            <p className="text-sm text-gray-600">
-              Balance: <span className="font-bold text-gray-900"><span className="font-black">৳</span>{runningBalance.toFixed(2)}</span>
-            </p>
-          )}
-        </div>
-        
-        {/* Right Side: Actions */}
-        <div className="flex items-center space-x-2">
-          <button onClick={() => onEdit(transaction)} className="text-blue-500 hover:text-blue-700 transition-colors">
-             <PencilIcon />
-          </button>
-          <button onClick={() => onDelete(transaction.id)} className="text-red-500 hover:text-red-700 transition-colors">
-            <TrashIcon />
-          </button>
-        </div>
+      {/* Action buttons on hover */}
+      <div className="flex justify-end items-center space-x-2 pt-2 mt-2 border-t border-gray-100">
+        <button onClick={onEdit} className="text-gray-400 hover:text-blue-500 transition-colors text-xs font-semibold flex items-center gap-1">
+           <PencilIcon /> Edit
+        </button>
+        <button onClick={onDelete} className="text-gray-400 hover:text-red-500 transition-colors text-xs font-semibold flex items-center gap-1">
+          <TrashIcon /> Delete
+        </button>
       </div>
     </li>
   );

@@ -5,7 +5,7 @@ import Avatar from './Avatar';
 
 interface MemberCardProps {
   user: User;
-  onRemove: (userId: string) => void;
+  onRemove: () => void;
 }
 
 const MemberCard: React.FC<MemberCardProps> = ({ user, onRemove }) => {
@@ -16,7 +16,7 @@ const MemberCard: React.FC<MemberCardProps> = ({ user, onRemove }) => {
         <span className="font-semibold text-gray-700 ml-4">{user.name}</span>
       </div>
       <button 
-        onClick={() => onRemove(user.id)} 
+        onClick={onRemove} 
         className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full"
         aria-label={`Remove ${user.name}`}
       >
