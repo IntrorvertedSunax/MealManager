@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { Toaster } from './components/Toaster';
+import { Toaster } from './components/ui/Toaster';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

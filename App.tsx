@@ -1,18 +1,18 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { User, Transaction, TransactionType, Page, ModalConfig, AlertDialogConfig, ModalType } from './types';
-import Header from './components/Header';
-import FlatmateBalanceCard from './components/FlatmateBalanceCard';
-import MemberCard from './components/MemberCard';
-import FormSheet from './components/FormSheet';
-import TransactionListItem from './components/TransactionHistory';
-import AlertDialog from './components/AlertDialog';
-import AddMenuSheet from './components/AddMenuSheet';
-import DashboardCard from './components/DashboardCard';
-import { toast } from './components/Toaster';
+import Header from './components/ui/Header';
+import FlatmateBalanceCard from './components/dashboard/FlatmateBalanceCard';
+import MemberCard from './components/members/MemberCard';
+import FormSheet from './components/forms/FormSheet';
+import TransactionListItem from './components/transactions/TransactionHistory';
+import AlertDialog from './components/ui/AlertDialog';
+import AddMenuSheet from './components/ui/AddMenuSheet';
+import DashboardCard from './components/dashboard/DashboardCard';
+import { toast } from './components/ui/Toaster';
 import { 
   HomeIcon, UserGroupIcon, ClipboardListIcon, CalendarIcon, ReceiptIcon, CurrencyBangladeshiIcon,
   MenuIcon, XIcon, PlusIcon, UserPlusIcon, SearchIcon
-} from './components/Icons';
+} from './components/ui/Icons';
 import { calculateMetrics } from './logic';
 import * as db from './data';
 
@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   // Load data from localStorage on initial component mount
   useEffect(() => {
@@ -38,6 +39,14 @@ const App: React.FC = () => {
   useEffect(() => {
     setSearchQuery('');
   }, [filterUserId]);
+  
+  // When the form sheet is closed, we can safely reset the submission lock.
+  useEffect(() => {
+    if (!sheetConfig.isOpen) {
+        setIsSubmitting(false);
+        isSubmittingRef.current = false;
+    }
+  }, [sheetConfig.isOpen]);
 
   const calculations = useMemo(() => calculateMetrics(users, transactions), [users, transactions]);
 
@@ -60,7 +69,8 @@ const App: React.FC = () => {
   const closeAlertDialog = () => setAlertDialog({ ...alertDialog, isOpen: false });
   
   const handleEntrySubmit = (entry: Partial<User & Transaction>, type: ModalType) => {
-    if (isSubmitting) return;
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
 
     const isEditing = !!entry.id;
@@ -68,13 +78,15 @@ const App: React.FC = () => {
         if (type === 'user') {
             const userEntry = entry as Partial<User>;
             if (!userEntry.name?.trim()) throw new Error('User name cannot be empty.');
-            
+
             if (isEditing) {
                 const updatedUser = db.updateUser({ ...users.find(u => u.id === userEntry.id), ...userEntry } as User);
                 setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
             } else {
+                // Simply call addUser - let data.ts handle the duplicate check
                 const newUser = db.addUser({ name: userEntry.name.trim() });
                 setUsers(prev => [...prev, newUser]);
+                handleNavigate('members');
             }
         } else { // Transaction types
             const txEntry = entry as Partial<Transaction> & { date: string };
@@ -125,7 +137,8 @@ const App: React.FC = () => {
     } catch (error) {
         const message = error instanceof Error ? error.message : `An unknown error occurred.`;
         toast.error('Error!', message);
-    } finally {
+        // On error, we must reset the lock manually so the user can try again.
+        isSubmittingRef.current = false;
         setIsSubmitting(false);
     }
   };
@@ -242,7 +255,14 @@ const App: React.FC = () => {
      <div className="bg-white p-6 rounded-lg shadow-md">
        <h2 className="text-xl font-bold text-gray-700 mb-4">All Members</h2>
        <div className="space-y-3">
-         {users.map(user => <MemberCard key={user.id} user={user} onEdit={() => openSheet('user', user)} onRemove={() => confirmRemoveUser(user)} />)}
+         {users.map(user => 
+            <MemberCard 
+              key={user.id} 
+              user={user} 
+              onEdit={() => openSheet('user', user)}
+              onRemove={() => confirmRemoveUser(user)} 
+            />
+          )}
        </div>
      </div>
   );
@@ -274,7 +294,7 @@ const App: React.FC = () => {
           .filter(t => t.type === 'meal' && t.userId === filteredUser.id)
           .map(t => ({
             ...t,
-            id: `meal-cost-${t.id}-${Date.now()}-${Math.random()}`, // Make ID unique to avoid key conflicts
+            id: `meal-cost-${t.id}`, // Make ID unique to avoid key conflicts
             type: 'expense' as const,
             amount: (t.mealCount ?? 0) * calculations.mealRate,
             description: `${t.mealCount} Meal(s) Cost`
@@ -289,17 +309,6 @@ const App: React.FC = () => {
         // For general history, filter out raw meal entries
         baseTransactions = sortedTransactions.filter(t => t.type !== 'meal');
       }
-      
-      // Ensure all transaction IDs are unique to prevent React key conflicts
-      const seenIds = new Set<string>();
-      baseTransactions = baseTransactions.filter(transaction => {
-        if (seenIds.has(transaction.id)) {
-          return false;
-        }
-        seenIds.add(transaction.id);
-        return true;
-      });
-      
       return baseTransactions;
     }, [filteredUser, sortedTransactions, calculations.mealRate]);
   

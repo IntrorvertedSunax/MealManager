@@ -1,5 +1,5 @@
 import React from 'react';
-import { ModalType } from '../types';
+import { ModalType } from '../../types';
 import { XIcon, MealIcon, DepositIcon, ReceiptIcon, UserPlusIcon } from './Icons';
 
 interface AddMenuSheetProps {

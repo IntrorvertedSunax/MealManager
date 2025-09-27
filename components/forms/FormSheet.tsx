@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ModalConfig, ModalType, Transaction } from '../types';
+import { User, ModalConfig, ModalType, Transaction } from '../../types';
 import FormWrapper from './FormWrapper';
 import MemberForm from './MemberForm';
 import MealForm from './MealForm';

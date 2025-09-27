@@ -8,6 +8,23 @@ const initialDb: DB = {
   transactions: [],
 };
 
+// --- Helper Functions ---
+
+/**
+ * Capitalizes the first letter of each word in a string.
+ * e.g., "john doe" -> "John Doe"
+ * @param str - The input string.
+ * @returns The capitalized string.
+ */
+const capitalizeWords = (str: string): string => {
+  if (!str) return '';
+  return str
+    .trim()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 // --- Low-level DB operations ---
 
 /**
@@ -40,14 +57,20 @@ const saveDb = (db: DB): void => {
 // --- High-level CRUD functions ---
 
 /**
- * Adds a new user to the database.
+ * Adds a new user to the database with a capitalized name.
  * @param userData - The user data to add (without an ID).
  * @returns The newly created user with an ID.
  */
 export const addUser = (userData: Omit<User, 'id' | 'avatarUrl'>): User => {
   const db = getDb();
+  const capitalizedName = capitalizeWords(userData.name);
+  
+  if (db.users.some(u => u.name.toLowerCase() === capitalizedName.toLowerCase())) {
+    throw new Error('Member already exists!');
+  }
+
   const newUser: User = { 
-    ...userData, 
+    name: capitalizedName,
     id: `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 11)}`,
     avatarUrl: ''
   };
@@ -57,15 +80,23 @@ export const addUser = (userData: Omit<User, 'id' | 'avatarUrl'>): User => {
 };
 
 /**
- * Updates an existing user in the database.
+ * Updates an existing user in the database with a capitalized name.
  * @param updatedUserData - The user data to update.
  * @returns The updated user.
  */
 export const updateUser = (updatedUserData: User): User => {
     const db = getDb();
-    db.users = db.users.map(u => u.id === updatedUserData.id ? updatedUserData : u);
+    const capitalizedName = capitalizeWords(updatedUserData.name);
+
+    if (db.users.some(u => u.name.toLowerCase() === capitalizedName.toLowerCase() && u.id !== updatedUserData.id)) {
+        throw new Error('Member already exists!');
+    }
+    
+    const finalUserData = { ...updatedUserData, name: capitalizedName };
+    
+    db.users = db.users.map(u => u.id === finalUserData.id ? finalUserData : u);
     saveDb(db);
-    return updatedUserData;
+    return finalUserData;
 };
 
 /**
