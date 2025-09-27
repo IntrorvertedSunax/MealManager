@@ -242,7 +242,7 @@ const App: React.FC = () => {
      <div className="bg-white p-6 rounded-lg shadow-md">
        <h2 className="text-xl font-bold text-gray-700 mb-4">All Members</h2>
        <div className="space-y-3">
-         {users.map(user => <MemberCard key={user.id} user={user} onRemove={() => confirmRemoveUser(user)} />)}
+         {users.map(user => <MemberCard key={user.id} user={user} onEdit={() => openSheet('user', user)} onRemove={() => confirmRemoveUser(user)} />)}
        </div>
      </div>
   );

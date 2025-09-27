@@ -151,9 +151,16 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
           return;
       }
       
+      let processedValue = value;
+      
+      // Auto-capitalize first letter of member names
+      if (name === 'name' && type === 'user') {
+        processedValue = value.charAt(0).toUpperCase() + value.slice(1);
+      }
+      
       setFormData(prev => ({
         ...prev,
-        [name]: inputType === 'number' ? (value === '' ? undefined : parseFloat(value)) : value
+        [name]: inputType === 'number' ? (processedValue === '' ? undefined : parseFloat(processedValue)) : processedValue
       }));
       if (errors[name]) {
         setErrors(prev => {
