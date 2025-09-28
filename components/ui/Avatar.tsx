@@ -2,9 +2,10 @@ import React from 'react';
 
 interface AvatarProps {
   name: string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-const Avatar: React.FC<AvatarProps> = ({ name }) => {
+const Avatar: React.FC<AvatarProps> = ({ name, size = 'md' }) => {
   const initial = name ? name.charAt(0).toUpperCase() : '?';
   
   // Simple hash function to get a consistent color
@@ -26,8 +27,14 @@ const Avatar: React.FC<AvatarProps> = ({ name }) => {
 
   const colorClasses = getColor(name);
 
+  const sizeClasses = {
+    sm: 'w-5 h-5 text-xs',
+    md: 'w-10 h-10 text-lg',
+    lg: 'w-16 h-16 text-2xl',
+  };
+
   return (
-    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${colorClasses}`}>
+    <div className={`rounded-full flex items-center justify-center font-bold flex-shrink-0 ${sizeClasses[size]} ${colorClasses}`}>
       {initial}
     </div>
   );

@@ -8,6 +8,7 @@ import TransactionListItem from './components/transactions/TransactionHistory';
 import AlertDialog from './components/ui/AlertDialog';
 import AddMenuSheet from './components/ui/AddMenuSheet';
 import DashboardCard from './components/dashboard/DashboardCard';
+import CalendarPage from './components/calendar/CalendarPage';
 import { toast } from './components/ui/Toaster';
 import { 
   HomeIcon, UserGroupIcon, ClipboardListIcon, CalendarIcon, ReceiptIcon, CurrencyBangladeshiIcon,
@@ -55,6 +56,14 @@ const App: React.FC = () => {
   const sortedTransactions = useMemo(() => 
     [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   [transactions]);
+  
+  const firstMealDate = useMemo(() => {
+    const mealTransactions = transactions.filter(t => t.type === 'meal');
+    if (mealTransactions.length === 0) return null;
+    const date = new Date(Math.min(...mealTransactions.map(t => new Date(t.date).getTime())));
+    date.setUTCHours(0, 0, 0, 0);
+    return date;
+  }, [transactions]);
 
   const handleNavigate = (newPage: Page, userId: string | null = null) => {
     setPage(newPage);
@@ -93,6 +102,22 @@ const App: React.FC = () => {
         } else { // Transaction types
             const txEntry = entry as Partial<Transaction> & { date: string };
             
+            let dateForTransaction: string;
+            const rawDate = txEntry.date;
+
+            if (rawDate && rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                // Correctly handle 'YYYY-MM-DD' as UTC date to avoid timezone bugs
+                dateForTransaction = new Date(rawDate + 'T00:00:00.000Z').toISOString();
+            } else if (rawDate) {
+                // Handle full date strings or other formats from edits
+                dateForTransaction = new Date(rawDate).toISOString();
+            } else {
+                // Default to today, midnight UTC if no date is provided
+                const today = new Date();
+                today.setUTCHours(0, 0, 0, 0);
+                dateForTransaction = today.toISOString();
+            }
+
             if (!txEntry.userId) throw new Error('A user must be selected.');
             if (type !== 'meal' && (!txEntry.amount || txEntry.amount <= 0)) throw new Error('Amount must be greater than 0.');
 
@@ -105,7 +130,7 @@ const App: React.FC = () => {
                   const newMeal = db.addTransaction({
                       type: 'meal',
                       userId: user.id,
-                      date: new Date(txEntry.date).toISOString(),
+                      date: dateForTransaction,
                       amount: 0,
                       description: txEntry.description || `${txEntry.mealCount || 0} meal(s)`,
                       mealCount: txEntry.mealCount || 0,
@@ -118,13 +143,17 @@ const App: React.FC = () => {
                 if (isEditing) {
                     const existingTx = transactions.find(t => t.id === txEntry.id);
                     if (!existingTx) throw new Error("Transaction not found for editing.");
-                    const updatedTransaction = db.updateTransaction({ ...existingTx, ...txEntry });
+                    const updatedData = { ...txEntry };
+                    if (updatedData.date) {
+                      updatedData.date = dateForTransaction;
+                    }
+                    const updatedTransaction = db.updateTransaction({ ...existingTx, ...updatedData });
                     setTransactions(transactions.map(t => t.id === updatedTransaction.id ? updatedTransaction : t));
                 } else {
                     const newTransactionData: Omit<Transaction, 'id'> = {
                         type: type as TransactionType,
                         userId: txEntry.userId as string,
-                        date: new Date(txEntry.date || new Date()).toISOString(),
+                        date: dateForTransaction,
                         amount: txEntry.amount || 0,
                         description: txEntry.description?.trim() || '',
                         mealCount: txEntry.mealCount || 0,
@@ -193,22 +222,20 @@ const App: React.FC = () => {
     openSheet(type);
   };
   
-  const HomePage = () => {
+  const HomePage = ({ firstMealDate }: { firstMealDate: Date | null }) => {
     const dayCount = useMemo(() => {
-      const mealTransactions = transactions.filter(t => t.type === 'meal');
-      if (mealTransactions.length === 0) return 0;
-
-      const firstDate = new Date(Math.min(...mealTransactions.map(t => new Date(t.date).getTime())));
+      if (!firstMealDate) return 0;
+      
       const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
       
-      firstDate.setHours(0, 0, 0, 0);
-      today.setHours(0, 0, 0, 0);
+      const diffTime = today.getTime() - firstMealDate.getTime();
+      if (diffTime < 0) return 0;
       
-      const diffTime = today.getTime() - firstDate.getTime();
-      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       
       return diffDays + 1;
-    }, [transactions]);
+    }, [firstMealDate]);
 
     const currentDate = new Date().toLocaleString('en-US', {
       month: 'long',
@@ -239,6 +266,15 @@ const App: React.FC = () => {
             <DashboardCard title="Meals" value={calculations.totalMealCount} />
             <DashboardCard title="Deposits" value={calculations.totalDeposits} formatAs="currency" />
             <DashboardCard title="Expenses" value={calculations.totalExpenses} formatAs="currency" />
+        </div>
+        
+        <div className="bg-white p-4 sm:p-5 rounded-lg shadow">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-700">Remaining Balance</h2>
+            <p className={`text-2xl font-bold ${calculations.remainingBalance >= 0 ? 'text-gray-800' : 'text-red-500'}`}>
+              {calculations.remainingBalance < 0 && '-'}<span className="font-black">৳</span>{Math.abs(calculations.remainingBalance).toFixed(2)}
+            </p>
+          </div>
         </div>
 
         <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
@@ -489,15 +525,13 @@ const App: React.FC = () => {
     );
   };
 
-  const CalendarPage = () => <div className="bg-white p-6 rounded-lg shadow-md text-center text-gray-500">Calendar feature coming soon.</div>;
-  
   const pageConfig = {
-    home: { title: 'Meal Management', component: HomePage, fab: { icon: <PlusIcon/>, action: () => setIsAddMenuOpen(true) } },
+    home: { title: 'Meal Management', component: () => <HomePage firstMealDate={firstMealDate} />, fab: { icon: <PlusIcon/>, action: () => setIsAddMenuOpen(true) } },
     members: { title: 'Members', component: MembersPage, fab: null },
     expenses: { title: 'All Expenses', component: ExpensesPage, fab: { icon: <PlusIcon/>, action: createOpenTransactionSheetHandler('expense') } },
     deposits: { title: 'All Deposits', component: DepositsPage, fab: { icon: <PlusIcon/>, action: createOpenTransactionSheetHandler('deposit') } },
     transactions: { title: 'Transaction History', component: TransactionsPage, fab: null },
-    calendar: { title: 'Calendar', component: CalendarPage, fab: null },
+    calendar: { title: 'Meal Calendar', component: () => <CalendarPage users={users} transactions={transactions} firstMealDate={firstMealDate} />, fab: null },
   };
 
   const ActivePage = pageConfig[page].component;
@@ -538,7 +572,7 @@ const App: React.FC = () => {
       <button onClick={() => handleNavigate('home')} className={`flex flex-col items-center justify-center text-xs ${page === 'home' ? 'text-green-600' : 'text-gray-500'}`}><HomeIcon /> Home</button>
       <button onClick={() => handleNavigate('members')} className={`flex flex-col items-center justify-center text-xs ${page === 'members' ? 'text-green-600' : 'text-gray-500'}`}><UserGroupIcon /> Members</button>
       {fabConfig && (<button onClick={fabConfig.action} className="w-16 h-16 -mt-8 bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg">{fabConfig.icon}</button>)}
-      <button onClick={() => handleNavigate('transactions')} className={`flex flex-col items-center justify-center text-xs ${page === 'transactions' ? 'text-green-600' : 'text-gray-500'}`}><ClipboardListIcon /> History</button>
+      <button onClick={() => handleNavigate('calendar')} className={`flex flex-col items-center justify-center text-xs ${page === 'calendar' ? 'text-green-600' : 'text-gray-500'}`}><CalendarIcon /> Calendar</button>
        <button onClick={() => setIsMenuOpen(true)} className="flex flex-col items-center justify-center text-xs text-gray-500"><MenuIcon /> More</button>
     </nav>
   );

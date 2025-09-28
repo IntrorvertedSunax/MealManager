@@ -29,3 +29,5 @@ export const HistoryIcon = () => (
 
 export const MealIcon = () => <IconWrapper><path strokeLinecap="round" strokeLinejoin="round" d="M12.5,2C12.5,2 12.5,9 10,9C7.5,9 7.5,2 7.5,2" /><path strokeLinecap="round" strokeLinejoin="round" d="M12.5,13L12.5,22" /><path strokeLinecap="round" strokeLinejoin="round" d="M10,13L10,22" /><path strokeLinecap="round" strokeLinejoin="round" d="M7.5,13L7.5,22" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.5 2L15.5 22" /></IconWrapper>;
 export const DepositIcon = () => <IconWrapper><path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></IconWrapper>;
+export const ChevronLeftIcon = () => <IconWrapper><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></IconWrapper>;
+export const ChevronRightIcon = () => <IconWrapper><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></IconWrapper>;
