@@ -32,22 +32,22 @@ const UserSelect: React.FC<UserSelectProps> = ({ users, selectedUserId, onChange
     setIsOpen(false);
   };
 
-  const buttonClasses = "w-full flex items-center gap-2 px-3 py-2 text-left bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition";
+  const buttonClasses = "w-full flex items-center gap-3 px-3 py-3 text-left bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
 
   return (
     <div ref={wrapperRef} className="relative">
       <button type="button" onClick={() => setIsOpen(!isOpen)} className={buttonClasses} aria-haspopup="listbox" aria-expanded={isOpen}>
         {selectedUser ? (
           <>
-            <Avatar name={selectedUser.name} avatar={selectedUser.avatar} size="sm" />
-            <span className="font-semibold text-gray-800 flex-grow text-sm">{selectedUser.name}</span>
+            <Avatar name={selectedUser.name} avatar={selectedUser.avatar} size="md-small" />
+            <span className="font-semibold text-gray-800 flex-grow">{selectedUser.name}</span>
           </>
         ) : (
           <>
-            <div className="w-5 h-5 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center">
-                <UserIcon className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center">
+                <UserIcon className="w-5 h-5" />
             </div>
-            <span className="text-gray-500 flex-grow text-sm">{placeholder}</span>
+            <span className="text-gray-500 flex-grow">{placeholder}</span>
           </>
         )}
         <UpDownIcon className="text-gray-500 h-5 w-5" />
@@ -65,10 +65,10 @@ const UserSelect: React.FC<UserSelectProps> = ({ users, selectedUserId, onChange
               <button
                 type="button"
                 onClick={() => handleSelect(user.id)}
-                className={`w-full flex items-center gap-2 px-2 py-1.5 text-left text-gray-900 transition-colors ${user.id === selectedUserId ? 'bg-green-50' : 'hover:bg-gray-100'}`}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-left text-gray-900 transition-colors ${user.id === selectedUserId ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
               >
-                <Avatar name={user.name} avatar={user.avatar} size="sm" />
-                <span className="font-medium text-sm">{user.name}</span>
+                <Avatar name={user.name} avatar={user.avatar} size="md-small" />
+                <span className="font-medium">{user.name}</span>
               </button>
             </li>
           ))}

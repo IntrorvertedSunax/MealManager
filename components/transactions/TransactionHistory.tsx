@@ -20,7 +20,7 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
 
   const isExpense = transaction.type === 'expense';
   
-  const title = isExpense ? transaction.description : `Deposit by ${user?.name || 'Unknown'}`;
+  const title = isExpense ? transaction.description : (user?.name || 'Unknown');
   const amountColor = isExpense ? 'text-red-600' : 'text-green-600';
   const sign = isExpense ? '-' : '+';
   
@@ -66,7 +66,7 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
             <span className="text-gray-600">Balance:</span>
             <span className="font-bold text-gray-800 ml-1">
               <span className="font-black">৳</span>
-              {runningBalance !== undefined ? runningBalance.toFixed(2) : 'N/A'}
+              {runningBalance !== undefined ? runningBalance.toFixed(0) : 'N/A'}
             </span>
           </p>
         </div>

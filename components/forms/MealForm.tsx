@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { User, Transaction } from '../../types';
 import { toast } from '../ui/Toaster';
 import Button from '../ui/Button';
-import { Input, Select, FormField } from './FormControls';
-import { CalendarIcon } from '../ui/Icons';
+import { Input, FormField } from './FormControls';
+import UserSelect from './UserSelect';
+import DatePicker from '../ui/DatePicker';
 
 interface MealFormProps {
   data: Transaction | null;
@@ -15,23 +16,8 @@ interface MealFormProps {
 const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users }) => {
   const isEditing = !!data;
 
-  const [formData, setFormData] = useState<Partial<Transaction>>(() => {
-    if (isEditing) {
-      const formDataToSet = { ...data };
-      if (formDataToSet.date) {
-        formDataToSet.date = new Date(formDataToSet.date).toISOString().split('T')[0];
-      }
-      return formDataToSet;
-    }
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return { 
-      date: `${year}-${month}-${day}`,
-      userId: users.length > 0 ? 'all' : ''
-    };
-  });
+  const [date, setDate] = useState<Date>(() => (data?.date ? new Date(data.date) : new Date()));
+  const [formData, setFormData] = useState<Partial<Transaction>>(() => isEditing ? { ...data, date: undefined } : { userId: 'all' });
 
   const [mealChecks, setMealChecks] = useState(() => {
     if (isEditing) return { breakfast: false, lunch: false, dinner: false };
@@ -42,24 +28,11 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
 
   const mealCount = (mealChecks.breakfast ? 1 : 0) + (mealChecks.lunch ? 1 : 0) + (mealChecks.dinner ? 1 : 0);
 
-  const formattedDate = useMemo(() => {
-    if (!formData.date) return '';
-    try {
-        // Appending 'T00:00:00Z' ensures the date is parsed as UTC to avoid timezone shifts.
-        const date = new Date(formData.date + 'T00:00:00Z');
-        return date.toLocaleDateString('en-US', {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
-            timeZone: 'UTC'
-        });
-    } catch (e) {
-        return '';
-    }
-  }, [formData.date]);
-
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
+    if (!formData.userId) {
+        newErrors.userId = 'Please select who had the meal.';
+    }
     if (isEditing) {
       if (!formData.mealCount || formData.mealCount <= 0) newErrors.mealCount = 'Number of meals must be greater than 0.';
     }
@@ -67,7 +40,7 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
 
     if (name in mealChecks) {
@@ -84,6 +57,17 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
           return newErrors;
         });
       }
+    }
+  };
+  
+  const handleUserChange = (userId: string) => {
+    setFormData(prev => ({ ...prev, userId }));
+    if (errors.userId) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.userId;
+        return newErrors;
+      });
     }
   };
 
@@ -104,6 +88,7 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
     const count = isEditing ? (formData.mealCount || 0) : mealCount;
     const submissionData = {
       ...formData,
+      date: date.toISOString(),
       mealCount: count,
       description: `${count} meal(s)`,
       amount: 0,
@@ -111,19 +96,22 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
 
     onSubmit(submissionData);
   };
+  
+  const userSelectUsers = isEditing ? users : [{ id: 'all', name: 'All Users', avatar: null }, ...users];
 
   return (
-    <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
+    <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
       <FormField label="Date">
-        <Input type="date" name="date" value={formData.date || ''} onChange={handleInputChange} required trailingIcon={<CalendarIcon />} />
-        {formattedDate && <p className="text-xs text-gray-500 mt-1 text-right">{formattedDate}</p>}
+        <DatePicker value={date} onChange={setDate} />
       </FormField>
 
-      <FormField label="Member">
-        <Select name="userId" value={formData.userId || ''} onChange={handleInputChange}>
-          {!isEditing && <option value="all">All Members</option>}
-          {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
-        </Select>
+      <FormField label="User" error={errors.userId}>
+         <UserSelect
+            users={userSelectUsers}
+            selectedUserId={formData.userId || null}
+            onChange={handleUserChange}
+            placeholder="Select who had the meal"
+        />
       </FormField>
 
       {isEditing ? (
@@ -139,8 +127,8 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
         </FormField>
       ) : (
         <>
-          <FormField label="Meals" description="Select which meals to log.">
-            <div className="flex items-center space-x-6">
+          <FormField label="Meal" description="Select which meals to log.">
+            <div className="flex items-center space-x-6 pt-1">
               {['breakfast', 'lunch', 'dinner'].map(meal => (
                 <label key={meal} className="flex items-center space-x-2 cursor-pointer">
                   <input 
@@ -161,7 +149,7 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
       )}
 
       <div className="pt-4">
-        <Button type="submit" disabled={isSubmitting} className="w-full justify-center py-3 text-base">
+        <Button variant="cta" type="submit" disabled={isSubmitting} className="w-full justify-center py-3 text-base">
             {isSubmitting ? 'Processing...' : `${isEditing ? 'Update' : 'Add'} Meal`}
         </Button>
       </div>

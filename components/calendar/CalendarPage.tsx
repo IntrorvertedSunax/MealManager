@@ -17,12 +17,18 @@ interface MealsOnDate {
 const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstMealDate }) => {
   const sortedUsers = useMemo(() => [...users].sort((a, b) => a.name.localeCompare(b.name)), [users]);
 
+  // Group meals by a local 'YYYY-MM-DD' date string to avoid timezone issues.
   const mealsByDate = useMemo(() => {
     const mealTransactions = transactions.filter(t => t.type === 'meal');
     const grouped: { [date: string]: MealsOnDate } = {};
 
     mealTransactions.forEach(transaction => {
-      const dateStr = new Date(transaction.date).toISOString().split('T')[0];
+      const date = new Date(transaction.date);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
       const user = users.find(u => u.id === transaction.userId);
       if (!user) return;
 
@@ -38,13 +44,24 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
     return grouped;
   }, [transactions, users]);
 
+  // Generate the range of days to display using local date methods.
   const dayRange = useMemo(() => {
     if (!firstMealDate) return [];
-
+    
     const days = [];
-    for (let i = 0; i < 30; i++) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate the number of days between the first meal and today.
+    const diffTime = today.getTime() - firstMealDate.getTime();
+    const dayCount = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Display at least 30 days, or more if the meal history is longer.
+    const loopCount = Math.max(30, dayCount > 0 ? dayCount : 30);
+
+    for (let i = 0; i < loopCount; i++) {
       const currentDate = new Date(firstMealDate);
-      currentDate.setUTCDate(currentDate.getUTCDate() + i);
+      currentDate.setDate(currentDate.getDate() + i);
       days.push({
         dayNumber: i + 1,
         date: currentDate,
@@ -77,14 +94,21 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {dayRange.map(item => {
-                            const dateStr = item.date.toISOString().split('T')[0];
+                            // Generate the lookup key using local date parts.
+                            const date = item.date;
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const dateStr = `${year}-${month}-${day}`;
+
                             return (
                             <tr key={dateStr} className="group hover:bg-gray-50">
                                 <td className="sticky left-0 bg-white group-hover:bg-gray-50 px-4 py-3 whitespace-nowrap font-bold text-gray-500 text-center border-r z-10 w-16 md:w-20">
                                     {item.dayNumber}
                                 </td>
                                 <td className="sticky left-16 md:left-20 bg-white group-hover:bg-gray-50 px-4 py-3 whitespace-nowrap font-medium text-gray-800 border-r z-10">
-                                    {item.date.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'long', day: 'numeric' })}
+                                    {/* Display date using local timezone */}
+                                    {item.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
                                 </td>
                                 {sortedUsers.map(user => {
                                 const mealCount = mealsByDate[dateStr]?.[user.id]?.mealCount ?? 0;

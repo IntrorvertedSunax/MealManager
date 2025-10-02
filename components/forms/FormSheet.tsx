@@ -24,7 +24,7 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
     meal: { title: isEditing ? 'Edit Meal' : 'Add Meal', description: 'Log meals consumed by a flatmate.' },
     expense: { title: isEditing ? 'Edit Expense' : 'Add Expense', description: 'Log a shared expense.' },
     deposit: { title: isEditing ? 'Edit Deposit' : 'Add Deposit', description: 'Log a financial contribution.' },
-    user: { title: isEditing ? 'Edit Member' : 'Add New Member', description: 'Manage a person in the group.' },
+    user: { title: isEditing ? 'Edit Member' : 'Add New Member', description: 'Add a new flatmate to the system.' },
   };
   const currentTitle = titleConfig[type];
 

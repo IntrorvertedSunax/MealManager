@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { User, Transaction } from '../../types';
 import { toast } from '../ui/Toaster';
 import Button from '../ui/Button';
 import { Input, FormField } from './FormControls';
-import { CalendarIcon } from '../ui/Icons';
 import UserSelect from './UserSelect';
+import DatePicker from '../ui/DatePicker';
 
 interface ExpenseFormProps {
   data: Transaction | null;
@@ -16,40 +16,20 @@ interface ExpenseFormProps {
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting, users }) => {
   const isEditing = !!data;
 
+  const [date, setDate] = useState<Date>(() => (data?.date ? new Date(data.date) : new Date()));
   const [formData, setFormData] = useState<any>(() => {
-    if (isEditing) {
-      const formDataToSet: any = { ...data };
-      if (formDataToSet.date) {
-        formDataToSet.date = new Date(formDataToSet.date).toISOString().split('T')[0];
+    if (isEditing && data) {
+      const { date, ...restData } = data;
+      const initialData: any = { ...restData };
+      if (initialData.amount !== undefined) {
+        initialData.amount = String(initialData.amount);
       }
-      if (formDataToSet.amount !== undefined) {
-        formDataToSet.amount = String(formDataToSet.amount);
-      }
-      return formDataToSet;
+      return initialData;
     }
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return { date: `${year}-${month}-${day}` };
+    return {};
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  const formattedDate = useMemo(() => {
-    if (!formData.date) return '';
-    try {
-        const date = new Date(formData.date + 'T00:00:00Z');
-        return date.toLocaleDateString('en-US', {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
-            timeZone: 'UTC'
-        });
-    } catch (e) {
-        return '';
-    }
-  }, [formData.date]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -60,7 +40,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name === 'amount' && value && !/^\d*\.?\d*$/.test(value)) {
         return;
@@ -95,7 +75,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
       return;
     }
     
-    const submissionData = { ...formData };
+    const submissionData = { ...formData, date: date.toISOString() };
     if (submissionData.amount !== undefined) {
       submissionData.amount = parseFloat(submissionData.amount) || 0;
     }
@@ -115,8 +95,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
       </FormField>
 
       <FormField label="Date">
-        <Input type="date" name="date" value={formData.date || ''} onChange={handleInputChange} required trailingIcon={<CalendarIcon />} />
-        {formattedDate && <p className="text-xs text-gray-500 mt-1 text-right">{formattedDate}</p>}
+        <DatePicker value={date} onChange={setDate} />
       </FormField>
 
       <FormField label="Amount" error={errors.amount}>
@@ -132,7 +111,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
       </FormField>
 
       <div className="pt-4">
-        <Button type="submit" disabled={isSubmitting} className="w-full justify-center py-3 text-base">
+        <Button variant="cta" type="submit" disabled={isSubmitting} className="w-full justify-center py-3 text-base">
             {isSubmitting ? 'Processing...' : `${isEditing ? 'Update' : 'Add'} Expense`}
         </Button>
       </div>

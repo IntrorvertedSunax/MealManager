@@ -8,7 +8,7 @@ interface FlatmateBalanceCardProps {
   balance: number;
   mealCount: number;
   totalDeposit: number;
-  totalExpenses: number;
+  mealCost: number;
   onHistoryClick: () => void;
 }
 
@@ -17,7 +17,7 @@ const FlatmateBalanceCard: React.FC<FlatmateBalanceCardProps> = ({
   balance,
   mealCount,
   totalDeposit,
-  totalExpenses,
+  mealCost,
   onHistoryClick
 }) => {
   const balanceColor = balance >= 0 ? 'text-green-600' : 'text-red-500';
@@ -30,7 +30,7 @@ const FlatmateBalanceCard: React.FC<FlatmateBalanceCardProps> = ({
           <div>
             <h3 className="font-bold text-lg text-gray-800 capitalize">{user.name}</h3>
             <p className={`font-bold text-lg ${balanceColor}`}>
-              {balance < 0 && '-'}<span className="font-black">৳</span>{Math.abs(balance).toFixed(2)}
+              {balance < 0 && '-'}<span className="font-black">৳</span>{Math.abs(balance).toFixed(0)}
             </p>
           </div>
         </div>
@@ -57,8 +57,8 @@ const FlatmateBalanceCard: React.FC<FlatmateBalanceCardProps> = ({
           <p className="font-bold text-gray-800 text-lg"><span className="font-black">৳</span>{totalDeposit}</p>
         </div>
         <div>
-          <p className="text-gray-500 text-sm">Total Expenses</p>
-          <p className="font-bold text-gray-800 text-lg"><span className="font-black">৳</span>{totalExpenses.toFixed(2)}</p>
+          <p className="text-gray-500 text-sm">Total Cost</p>
+          <p className="font-bold text-gray-800 text-lg"><span className="font-black">৳</span>{mealCost.toFixed(0)}</p>
         </div>
       </div>
     </div>

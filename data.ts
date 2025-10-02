@@ -23,9 +23,21 @@ const capitalizeWords = (str: string): string => {
 // --- Low-level DB operations ---
 
 /**
+ * Saves the entire database object to localStorage.
+ * @param db - The database object to save.
+ */
+const saveDb = (db: DB): void => {
+  try {
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+  } catch (error) {
+    console.error("Failed to write to localStorage", error);
+  }
+};
+
+
+/**
  * Retrieves the entire database from localStorage.
- * If no data is found or an error occurs, it returns a fresh, empty DB structure
- * to prevent mutation of a shared initial state.
+ * If no data is found, it creates an initial DB with a default member for testing.
  * @returns The database object (DB).
  */
 export const getDb = (): DB => {
@@ -37,24 +49,23 @@ export const getDb = (): DB => {
   } catch (error) {
     console.error("Failed to read from localStorage", error);
   }
-  // Return a new object to prevent shared state mutations on first load.
-  return {
-    users: [],
+  
+  // No data found, create initial DB with a default member for testing.
+  const defaultUser: User = {
+    name: 'Default Member',
+    id: `default-${Date.now().toString(36)}`,
+    avatar: null
+  };
+  
+  const newDb: DB = {
+    users: [defaultUser],
     transactions: [],
   };
+
+  saveDb(newDb); // Save it so it's not created again on next load
+  return newDb;
 };
 
-/**
- * Saves the entire database object to localStorage.
- * @param db - The database object to save.
- */
-const saveDb = (db: DB): void => {
-  try {
-    localStorage.setItem(DB_KEY, JSON.stringify(db));
-  } catch (error) {
-    console.error("Failed to write to localStorage", error);
-  }
-};
 
 // --- High-level CRUD functions ---
 

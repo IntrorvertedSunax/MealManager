@@ -17,7 +17,7 @@ const FormWrapper: React.FC<FormWrapperProps> = ({ isOpen, onClose, title, descr
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-xl font-bold text-gray-800">{title}</h2>
-              <p className="text-sm text-gray-500">{description}</p>
+              <p className="text-sm text-blue-700">{description}</p>
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><XIcon /></button>
           </div>
