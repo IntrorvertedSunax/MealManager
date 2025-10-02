@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { User, Transaction } from '../../types';
 import { toast } from '../ui/Toaster';
 import Button from '../ui/Button';
@@ -23,8 +23,12 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
       }
       return formDataToSet;
     }
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
     return { 
-      date: new Date().toISOString().split('T')[0],
+      date: `${year}-${month}-${day}`,
       userId: users.length > 0 ? 'all' : ''
     };
   });
@@ -37,6 +41,22 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const mealCount = (mealChecks.breakfast ? 1 : 0) + (mealChecks.lunch ? 1 : 0) + (mealChecks.dinner ? 1 : 0);
+
+  const formattedDate = useMemo(() => {
+    if (!formData.date) return '';
+    try {
+        // Appending 'T00:00:00Z' ensures the date is parsed as UTC to avoid timezone shifts.
+        const date = new Date(formData.date + 'T00:00:00Z');
+        return date.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+            timeZone: 'UTC'
+        });
+    } catch (e) {
+        return '';
+    }
+  }, [formData.date]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -94,15 +114,16 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
 
   return (
     <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
-      <FormField label="User">
-        <Select name="userId" value={formData.userId || ''} onChange={handleInputChange}>
-          {!isEditing && <option value="all">All Users</option>}
-          {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
-        </Select>
-      </FormField>
-      
       <FormField label="Date">
         <Input type="date" name="date" value={formData.date || ''} onChange={handleInputChange} required trailingIcon={<CalendarIcon />} />
+        {formattedDate && <p className="text-xs text-gray-500 mt-1 text-right">{formattedDate}</p>}
+      </FormField>
+
+      <FormField label="Member">
+        <Select name="userId" value={formData.userId || ''} onChange={handleInputChange}>
+          {!isEditing && <option value="all">All Members</option>}
+          {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
+        </Select>
       </FormField>
 
       {isEditing ? (
@@ -126,7 +147,7 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
                     type="checkbox" name={meal} 
                     checked={mealChecks[meal as keyof typeof mealChecks]} 
                     onChange={handleInputChange} 
-                    className="h-5 w-5 rounded-md border-gray-300 text-green-600 focus:ring-green-500"
+                    className="h-5 w-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span className="capitalize text-gray-700">{meal}</span>
                 </label>

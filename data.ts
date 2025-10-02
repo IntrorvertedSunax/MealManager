@@ -63,7 +63,7 @@ const saveDb = (db: DB): void => {
  * @param userData - The user data to add (without an ID).
  * @returns The newly created user with an ID.
  */
-export const addUser = (userData: Omit<User, 'id' | 'avatarUrl'>): User => {
+export const addUser = (userData: Omit<User, 'id'>): User => {
   const db = getDb();
   const capitalizedName = capitalizeWords(userData.name);
 
@@ -78,7 +78,7 @@ export const addUser = (userData: Omit<User, 'id' | 'avatarUrl'>): User => {
   const newUser: User = { 
     name: capitalizedName,
     id: `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 11)}`,
-    avatarUrl: ''
+    avatar: userData.avatar || null
   };
   db.users.push(newUser);
   saveDb(db);

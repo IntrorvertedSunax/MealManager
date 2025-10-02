@@ -1,6 +1,7 @@
 import React from 'react';
 import { Transaction, User } from '../../types';
-import { PencilIcon, TrashIcon, DepositIcon, ReceiptIcon } from '../ui/Icons';
+import { PencilIcon, TrashIcon } from '../ui/Icons';
+import Badge from '../ui/Badge';
 
 interface TransactionListItemProps {
   transaction: Transaction;
@@ -19,63 +20,74 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
 
   const isExpense = transaction.type === 'expense';
   
-  const title = isExpense ? transaction.description : `Deposit from ${user?.name || 'Unknown'}`;
-  const amountColor = isExpense ? 'text-red-500' : 'text-green-600';
+  const title = isExpense ? transaction.description : `Deposit by ${user?.name || 'Unknown'}`;
+  const amountColor = isExpense ? 'text-red-600' : 'text-green-600';
   const sign = isExpense ? '-' : '+';
   
-  const iconConfig = {
-    expense: { icon: <ReceiptIcon />, bg: 'bg-red-50' },
-    deposit: { icon: <DepositIcon />, bg: 'bg-green-50' },
-  };
-  const currentIcon = iconConfig[transaction.type];
-
-  const formattedDate = new Date(transaction.date).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
+  const date = new Date(transaction.date);
+  const datePart = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const timePart = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+  const formattedDateTime = `${datePart}, ${timePart}`;
 
   return (
-    <li className="p-4 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
-      <div className="flex items-center justify-between gap-4">
-        {/* Left Side: Icon, Title, Subtitle */}
-        <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${currentIcon.bg} ${amountColor}`}>
-            {currentIcon.icon}
-          </div>
-          <div>
-            <h3 className="font-bold text-gray-800 capitalize">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
+      {/* Top Section: Title, Date, Amount */}
+      <div className="flex justify-between items-start">
+        <div className="flex-grow pr-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Badge type={transaction.type} />
+            <h3 className="font-bold text-gray-800 capitalize leading-tight">
               {title}
             </h3>
-            <p className="text-sm text-gray-500 mt-1">
-              {formattedDate}
-              {isExpense && ` • Paid by ${user?.name || 'Unknown'}`}
-            </p>
           </div>
+          <p className="text-sm text-gray-500">
+            {formattedDateTime}
+          </p>
         </div>
-        
-        {/* Right Side: Amount and Running Balance */}
         <div className="text-right flex-shrink-0">
-          <p className={`font-bold text-lg ${amountColor}`}>
+          <p className={`font-bold text-xl ${amountColor}`}>
             {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(2)}
           </p>
-          {runningBalance !== undefined && (
-            <p className="text-xs text-gray-500">
-              Balance: <span className="font-semibold">৳{runningBalance.toFixed(2)}</span>
+          {isExpense && user && (
+            <p className="text-sm text-gray-500 mt-0.5">
+              Paid by {user.name}
             </p>
           )}
         </div>
       </div>
-      
-      {/* Action buttons on hover */}
-      <div className="flex justify-end items-center space-x-2 pt-2 mt-2 border-t border-gray-100">
-        <button onClick={onEdit} className="text-gray-400 hover:text-blue-500 transition-colors text-xs font-semibold flex items-center gap-1">
-           <PencilIcon /> Edit
-        </button>
-        <button onClick={onDelete} className="text-gray-400 hover:text-red-500 transition-colors text-xs font-semibold flex items-center gap-1">
-          <TrashIcon /> Delete
-        </button>
+
+      {/* Divider */}
+      <div className="border-t border-gray-200/80" />
+
+      {/* Bottom Section: Balance and Actions */}
+      <div className="flex justify-between items-center">
+        <div>
+          <p className="text-base">
+            <span className="text-gray-600">Balance:</span>
+            <span className="font-bold text-gray-800 ml-1">
+              <span className="font-black">৳</span>
+              {runningBalance !== undefined ? runningBalance.toFixed(2) : 'N/A'}
+            </span>
+          </p>
+        </div>
+        <div className="flex items-center">
+          <button 
+            onClick={onEdit} 
+            className="p-1.5 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
+            aria-label="Edit transaction"
+          >
+            <PencilIcon className="h-5 w-5" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded-full text-red-500 hover:bg-red-100 transition-colors"
+            aria-label="Delete transaction"
+          >
+            <TrashIcon className="h-5 w-5" />
+          </button>
+        </div>
       </div>
-    </li>
+    </div>
   );
 };
 

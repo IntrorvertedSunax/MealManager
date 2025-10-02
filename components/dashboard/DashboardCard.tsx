@@ -4,15 +4,16 @@ interface DashboardCardProps {
   title: string;
   value: number;
   formatAs?: 'currency';
+  precision?: number;
 }
 
-const DashboardCard: React.FC<DashboardCardProps> = ({ title, value, formatAs }) => {
+const DashboardCard: React.FC<DashboardCardProps> = ({ title, value, formatAs, precision = 0 }) => {
   return (
     <div className="bg-white p-4 rounded-xl shadow-md text-center">
       <p className="text-sm text-gray-500">{title}</p>
       <p className="text-2xl font-bold text-gray-800 mt-1">
         {formatAs === 'currency' && <span className="font-black">৳</span>}
-        {formatAs === 'currency' ? value.toFixed(0) : value}
+        {formatAs === 'currency' ? value.toFixed(precision) : value}
       </p>
     </div>
   );

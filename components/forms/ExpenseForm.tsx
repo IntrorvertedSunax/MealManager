@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { User, Transaction } from '../../types';
 import { toast } from '../ui/Toaster';
 import Button from '../ui/Button';
-import { Input, Select, FormField } from './FormControls';
+import { Input, FormField } from './FormControls';
 import { CalendarIcon } from '../ui/Icons';
+import UserSelect from './UserSelect';
 
 interface ExpenseFormProps {
   data: Transaction | null;
@@ -26,14 +27,33 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
       }
       return formDataToSet;
     }
-    return { date: new Date().toISOString().split('T')[0] };
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return { date: `${year}-${month}-${day}` };
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  const formattedDate = useMemo(() => {
+    if (!formData.date) return '';
+    try {
+        const date = new Date(formData.date + 'T00:00:00Z');
+        return date.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+            timeZone: 'UTC'
+        });
+    } catch (e) {
+        return '';
+    }
+  }, [formData.date]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.userId) newErrors.userId = 'Please select a user.';
+    if (!formData.userId) newErrors.userId = 'Please select a member.';
     if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = 'Amount must be greater than 0.';
     if (!formData.description?.trim()) newErrors.description = 'Description is required.';
     setErrors(newErrors);
@@ -52,6 +72,17 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
         delete newErrors[name];
         return newErrors;
       });
+    }
+  };
+  
+  const handleUserChange = (userId: string) => {
+    setFormData((prev: any) => ({ ...prev, userId }));
+    if (errors.userId) {
+        setErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.userId;
+            return newErrors;
+        });
     }
   };
 
@@ -73,23 +104,26 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
   };
 
   return (
-    <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
-      <FormField label="User" error={errors.userId}>
-        <Select name="userId" value={formData.userId || ''} onChange={handleInputChange}>
-          <option value="" disabled>Select a user</option>
-          {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
-        </Select>
+    <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
+      <FormField label="Paid by" error={errors.userId}>
+         <UserSelect
+            users={users}
+            selectedUserId={formData.userId || null}
+            onChange={handleUserChange}
+            placeholder="Select a member"
+        />
       </FormField>
 
       <FormField label="Date">
         <Input type="date" name="date" value={formData.date || ''} onChange={handleInputChange} required trailingIcon={<CalendarIcon />} />
+        {formattedDate && <p className="text-xs text-gray-500 mt-1 text-right">{formattedDate}</p>}
       </FormField>
 
       <FormField label="Amount" error={errors.amount}>
         <Input
           type="text" name="amount" value={formData.amount ?? ''} onChange={handleInputChange}
           placeholder="0.00" inputMode="decimal"
-          leadingIcon={<span className="text-gray-500 sm:text-sm font-black">৳</span>}
+          leadingIcon={<span className="sm:text-sm font-black">৳</span>}
         />
       </FormField>
       

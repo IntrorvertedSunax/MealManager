@@ -1,7 +1,7 @@
 export interface User {
   id: string;
   name: string;
-  avatarUrl: string;
+  avatar: string | null;
 }
 
 export type TransactionType = 'meal' | 'expense' | 'deposit';

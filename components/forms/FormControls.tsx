@@ -1,20 +1,20 @@
 import React from 'react';
-import { SwitchVerticalIcon } from '../ui/Icons';
+import { UpDownIcon } from '../ui/Icons';
 
 export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { leadingIcon?: React.ReactNode, trailingIcon?: React.ReactNode }> = ({ leadingIcon, trailingIcon, className, ...props }) => {
-  const baseStyles = "w-full py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition";
-  const paddingClasses = `${leadingIcon ? 'pl-8' : 'pl-3'} ${trailingIcon ? 'pr-10' : 'pr-3'}`;
+  const baseStyles = "peer w-full py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
+  const paddingClasses = `${leadingIcon ? 'pl-10' : 'pl-3'} ${trailingIcon ? 'pr-10' : 'pr-3'}`;
   
   return (
     <div className="relative">
       {leadingIcon && (
-        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 transition-colors peer-focus:text-blue-600">
           {leadingIcon}
         </div>
       )}
       <input {...props} className={`${baseStyles} ${paddingClasses} ${className || ''}`} />
       {trailingIcon && (
-        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
+        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400 transition-colors peer-focus:text-blue-600">
           {trailingIcon}
         </div>
       )}
@@ -27,12 +27,12 @@ export const Select: React.FC<React.SelectHTMLAttributes<HTMLSelectElement> & { 
     <div className="relative">
       <select 
         {...props} 
-        className={`w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition ${className || ''}`}
+        className={`w-full appearance-none px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${className || ''}`}
       >
         {children}
       </select>
       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-        <SwitchVerticalIcon />
+        <UpDownIcon />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React from 'react';
 import { User } from '../../types';
-import { HistoryIcon } from '../ui/Icons';
+import { ClipboardListIcon } from '../ui/Icons';
+import Avatar from '../ui/Avatar';
 
 interface FlatmateBalanceCardProps {
   user: User;
@@ -20,17 +21,14 @@ const FlatmateBalanceCard: React.FC<FlatmateBalanceCardProps> = ({
   onHistoryClick
 }) => {
   const balanceColor = balance >= 0 ? 'text-green-600' : 'text-red-500';
-  const avatarInitial = user.name.charAt(0).toUpperCase();
 
   return (
     <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-500 text-lg">
-            {avatarInitial}
-          </div>
+          <Avatar name={user.name} avatar={user.avatar} />
           <div>
-            <h3 className="font-bold text-gray-800 capitalize">{user.name}</h3>
+            <h3 className="font-bold text-lg text-gray-800 capitalize">{user.name}</h3>
             <p className={`font-bold text-lg ${balanceColor}`}>
               {balance < 0 && '-'}<span className="font-black">৳</span>{Math.abs(balance).toFixed(2)}
             </p>
@@ -42,7 +40,7 @@ const FlatmateBalanceCard: React.FC<FlatmateBalanceCardProps> = ({
             aria-label={`View history for ${user.name}`}
         >
           <div className="w-5 h-5">
-            <HistoryIcon />
+            <ClipboardListIcon />
           </div>
         </button>
       </div>
