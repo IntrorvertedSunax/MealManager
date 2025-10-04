@@ -1,63 +1,94 @@
-import React, { useState } from 'react';
-import { User, Transaction } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { User, Transaction, MealOption } from '../../types';
 import { toast } from '../ui/Toaster';
 import Button from '../ui/Button';
 import { Input, FormField } from './FormControls';
 import UserSelect from './UserSelect';
 import DatePicker from '../ui/DatePicker';
+import { getSettings } from '../../data';
 
 interface MealFormProps {
-  data: Transaction | null;
+  data: Transaction | Partial<Transaction> | null;
   onSubmit: (data: Partial<Transaction>) => void;
   isSubmitting: boolean;
   users: User[];
 }
 
 const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users }) => {
-  const isEditing = !!data;
+  const { enabledMeals, defaultMealValues } = getSettings();
 
+  // State for form fields that are not part of the meal breakdown
   const [date, setDate] = useState<Date>(() => (data?.date ? new Date(data.date) : new Date()));
-  const [formData, setFormData] = useState<Partial<Transaction>>(() => isEditing ? { ...data, date: undefined } : { userId: 'all' });
+  
+  const [formData, setFormData] = useState<Partial<Transaction>>(() => {
+    if (data) {
+      return { id: data.id, userId: data.userId };
+    }
+    // Default for the general "Add Meal" button
+    return { userId: 'all' };
+  });
 
-  const [mealChecks, setMealChecks] = useState(() => {
-    if (isEditing) return { breakfast: false, lunch: false, dinner: false };
-    return { breakfast: true, lunch: true, dinner: true };
+  // State for the meal breakdown values (e.g., { lunch: "1", dinner: "1" })
+  const [mealValues, setMealValues] = useState<Record<string, string>>(() => {
+    if (data?.mealDetails) {
+      // Populate from existing meal details
+      const detailsAsString: Record<string, string> = {};
+      enabledMeals.forEach(meal => {
+        const value = data.mealDetails?.[meal as MealOption];
+        detailsAsString[meal] = value ? String(value) : '';
+      });
+      return detailsAsString;
+    }
+    
+    if (!data) {
+      // No data provided, so it's a general "Add Meal" - use defaults
+      const defaultValues: Record<string, string> = {};
+      enabledMeals.forEach(meal => {
+        const defaultValue = defaultMealValues[meal as MealOption];
+        defaultValues[meal] = defaultValue ? String(defaultValue) : '';
+      });
+      return defaultValues;
+    }
+
+    // Data is provided, but no mealDetails.
+    // This covers both editing an old entry AND clicking an empty calendar cell.
+    // In both cases, we want to start with 0s.
+    return {};
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const mealCount = (mealChecks.breakfast ? 1 : 0) + (mealChecks.lunch ? 1 : 0) + (mealChecks.dinner ? 1 : 0);
+  // For backward compatibility, show the old total if editing a legacy meal entry
+  const previousTotal = useMemo(() => {
+    const isEditing = !!data?.id;
+    if (isEditing && data && data.mealCount !== undefined && !data.mealDetails) {
+      return data.mealCount;
+    }
+    return null;
+  }, [data]);
+
+  // The total meal count is always derived from the individual meal inputs
+  const mealCount = useMemo(() => {
+    return Object.values(mealValues).reduce((sum: number, value: string) => {
+      const num = parseInt(value, 10);
+      return sum + (isNaN(num) ? 0 : num);
+    }, 0);
+  }, [mealValues]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!formData.userId) {
         newErrors.userId = 'Please select who had the meal.';
     }
-    if (isEditing) {
-      if (!formData.mealCount || formData.mealCount <= 0) newErrors.mealCount = 'Number of meals must be greater than 0.';
-    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-
-    if (name in mealChecks) {
-      setMealChecks(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'number' ? (value === '' ? undefined : parseFloat(value)) : value
-      }));
-      if (errors[name]) {
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors[name];
-          return newErrors;
-        });
-      }
-    }
+  const handleMealValueChange = (meal: MealOption, value: string) => {
+    setMealValues(prev => ({
+      ...prev,
+      [meal]: value,
+    }));
   };
   
   const handleUserChange = (userId: string) => {
@@ -75,29 +106,54 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
     e.preventDefault();
     if (isSubmitting) return;
 
-    if (!isEditing && mealCount === 0) {
-      toast.error('Error!', 'Please select at least one meal.');
-      return;
-    }
-    
     if (!validate()) {
       toast.error('Validation Error', 'Please fix the errors in the form.');
       return;
     }
 
-    const count = isEditing ? (formData.mealCount || 0) : mealCount;
-    const submissionData = {
+    const mealDetailsToSubmit: Partial<Record<MealOption, number>> = {};
+    enabledMeals.forEach(meal => {
+        const count = parseInt(mealValues[meal], 10);
+        if (!isNaN(count) && count > 0) {
+            mealDetailsToSubmit[meal] = count;
+        }
+    });
+
+    const finalMealCount = Object.values(mealDetailsToSubmit).reduce((sum, count) => sum + (count || 0), 0);
+
+    const submissionData: Partial<Transaction> = {
       ...formData,
+      id: data?.id,
       date: date.toISOString(),
-      mealCount: count,
-      description: `${count} meal(s)`,
+      mealDetails: mealDetailsToSubmit,
+      description: `${finalMealCount} meal(s)`,
       amount: 0,
     };
 
     onSubmit(submissionData);
   };
   
-  const userSelectUsers = isEditing ? users : [{ id: 'all', name: 'All Users', avatar: null }, ...users];
+  const isEditing = !!data?.id;
+  // "All Users" is only an option for the general "Add Meal" case (when `data` is null).
+  // If `data` is provided, it's a specific action from the calendar for a single user.
+  const isSpecificUserAction = !!data;
+  const userSelectUsers = isSpecificUserAction ? users : [{ id: 'all', name: 'All Users', avatar: null }, ...users];
+
+  const mealLabels: Record<MealOption, string> = {
+    'breakfast': 'Breakfast',
+    'lunch': 'Lunch',
+    'dinner': 'Dinner',
+  };
+
+  const primaryMeals: MealOption[] = ['breakfast', 'lunch', 'dinner'];
+  const enabledPrimaryMeals = enabledMeals.filter(meal => primaryMeals.includes(meal));
+
+  const gridClassMap: { [key: number]: string } = {
+    1: 'grid-cols-1',
+    2: 'grid-cols-2',
+    3: 'grid-cols-3',
+  };
+  const gridColsClass = gridClassMap[enabledPrimaryMeals.length] || 'grid-cols-1';
 
   return (
     <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
@@ -114,38 +170,40 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
         />
       </FormField>
 
-      {isEditing ? (
-        <FormField label="Number of Meals" error={errors.mealCount}>
-          <Input
-            type="number"
-            name="mealCount"
-            value={formData.mealCount ?? ''}
-            onChange={handleInputChange}
-            placeholder="0"
-            min="1" step="1" inputMode="numeric"
-          />
+      {previousTotal !== null && (
+        <div className="text-center p-3 bg-gray-100 rounded-lg">
+            <p className="text-sm text-gray-600">Previous Total</p>
+            <p className="font-bold text-2xl text-gray-800">{previousTotal}</p>
+            <p className="text-xs text-gray-500 mt-1">Please re-enter the meal breakdown below.</p>
+        </div>
+      )}
+
+      {enabledPrimaryMeals.length > 0 && (
+        <div className={`grid ${gridColsClass} gap-x-4 gap-y-6`}>
+          {enabledPrimaryMeals.map(meal => (
+            <FormField key={meal} label={mealLabels[meal]}>
+              <Input
+                type="number"
+                step="1"
+                min="0"
+                name={meal}
+                value={mealValues[meal] || ''}
+                onChange={(e) => handleMealValueChange(meal as MealOption, e.target.value)}
+                placeholder="0"
+              />
+            </FormField>
+          ))}
+        </div>
+      )}
+
+      {enabledMeals.length > 0 && (
+        <FormField label="Total Number of Meals">
+          <Input type="number" readOnly value={mealCount} className="bg-gray-100 text-gray-700 font-medium" />
         </FormField>
-      ) : (
-        <>
-          <FormField label="Meal" description="Select which meals to log.">
-            <div className="flex items-center space-x-6 pt-1">
-              {['breakfast', 'lunch', 'dinner'].map(meal => (
-                <label key={meal} className="flex items-center space-x-2 cursor-pointer">
-                  <input 
-                    type="checkbox" name={meal} 
-                    checked={mealChecks[meal as keyof typeof mealChecks]} 
-                    onChange={handleInputChange} 
-                    className="h-5 w-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="capitalize text-gray-700">{meal}</span>
-                </label>
-              ))}
-            </div>
-          </FormField>
-          <FormField label="Number of Meals">
-            <Input type="number" readOnly value={mealCount} className="bg-gray-100 text-gray-700 font-medium" />
-          </FormField>
-        </>
+      )}
+
+      {enabledMeals.length === 0 && (
+          <p className="text-sm text-gray-500">No meal types are enabled. Go to Settings to enable them.</p>
       )}
 
       <div className="pt-4">

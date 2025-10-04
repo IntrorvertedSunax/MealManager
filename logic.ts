@@ -21,6 +21,20 @@ export interface CalculationMetrics {
 }
 
 /**
+ * Calculates the total number of meals from a transaction object,
+ * prioritizing the new `mealDetails` object but falling back to the legacy `mealCount`.
+ * @param transaction - The transaction to process.
+ * @returns The total number of meals for that transaction.
+ */
+const getMealCount = (transaction: Transaction): number => {
+    if (transaction.mealDetails) {
+      return Object.values(transaction.mealDetails).reduce((sum, count) => sum + (count || 0), 0);
+    }
+    return transaction.mealCount ?? 0;
+};
+
+
+/**
  * A central function to calculate all financial metrics for the application.
  * It takes users and transactions and returns a comprehensive metrics object.
  * @param users - An array of all users in the group.
@@ -35,7 +49,7 @@ export function calculateMetrics(users: User[], transactions: Transaction[]): Ca
   // Calculate totals for the entire group
   const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
   const totalDeposits = deposits.reduce((sum, t) => sum + t.amount, 0);
-  const totalMealCount = meals.reduce((sum, t) => sum + (t.mealCount ?? 0), 0);
+  const totalMealCount = meals.reduce((sum, t) => sum + getMealCount(t), 0);
   
   // The meal rate is the total cost of all expenses divided by the total number of meals.
   const mealRate = totalMealCount > 0 ? totalExpenses / totalMealCount : 0;
@@ -55,7 +69,7 @@ export function calculateMetrics(users: User[], transactions: Transaction[]): Ca
 
     const userMealCount = meals
       .filter(t => t.userId === user.id)
-      .reduce((sum, t) => sum + (t.mealCount ?? 0), 0);
+      .reduce((sum, t) => sum + getMealCount(t), 0);
       
     const userMealCost = userMealCount * mealRate;
     

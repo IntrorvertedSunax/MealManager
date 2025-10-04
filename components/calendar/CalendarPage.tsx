@@ -1,98 +1,78 @@
 import React, { useMemo } from 'react';
-import { User, Transaction } from '../../types';
+import { User, Transaction, ModalType } from '../../types';
+import { CalculationMetrics } from '../../logic';
 
 interface CalendarPageProps {
   users: User[];
   transactions: Transaction[];
   firstMealDate: Date | null;
+  lastMealDate: Date | null;
+  calculations: CalculationMetrics;
+  openSheet: (type: ModalType, data: Transaction | Partial<Transaction>) => void;
 }
 
-interface MealsOnDate {
-  [userId: string]: {
-    user: User;
-    mealCount: number;
-  };
-}
-
-const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstMealDate }) => {
+const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstMealDate, lastMealDate, calculations, openSheet }) => {
   const sortedUsers = useMemo(() => [...users].sort((a, b) => a.name.localeCompare(b.name)), [users]);
 
-  // Group meals by a local 'YYYY-MM-DD' date string to avoid timezone issues.
-  const mealsByDate = useMemo(() => {
-    const mealTransactions = transactions.filter(t => t.type === 'meal');
-    const grouped: { [date: string]: MealsOnDate } = {};
-
-    mealTransactions.forEach(transaction => {
-      const date = new Date(transaction.date);
+  // Create a map for efficient lookup of meals by date and user ID.
+  const mealMap = useMemo(() => {
+    const map = new Map<string, Transaction>();
+    transactions.filter(t => t.type === 'meal').forEach(t => {
+      // Use local date parts to avoid timezone issues
+      const date = new Date(t.date);
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
-      
-      const user = users.find(u => u.id === transaction.userId);
-      if (!user) return;
-
-      if (!grouped[dateStr]) {
-        grouped[dateStr] = {};
-      }
-      if (!grouped[dateStr][user.id]) {
-        grouped[dateStr][user.id] = { user, mealCount: 0 };
-      }
-      grouped[dateStr][user.id].mealCount += transaction.mealCount ?? 0;
+      const key = `${dateStr}-${t.userId}`;
+      map.set(key, t);
     });
+    return map;
+  }, [transactions]);
 
-    return grouped;
-  }, [transactions, users]);
-
-  // Generate the range of days to display using local date methods.
+  // Generate the range of days to display from the first meal to the last.
   const dayRange = useMemo(() => {
-    if (!firstMealDate) return [];
+    if (!firstMealDate || !lastMealDate) return [];
     
     const days = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    // Calculate the number of days between the first meal and today.
-    const diffTime = today.getTime() - firstMealDate.getTime();
-    const dayCount = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    
-    // Display at least 30 days, or more if the meal history is longer.
-    const loopCount = Math.max(30, dayCount > 0 ? dayCount : 30);
+    let currentDate = new Date(firstMealDate);
+    let dayCounter = 1;
 
-    for (let i = 0; i < loopCount; i++) {
-      const currentDate = new Date(firstMealDate);
-      currentDate.setDate(currentDate.getDate() + i);
+    while (currentDate <= lastMealDate) {
       days.push({
-        dayNumber: i + 1,
-        date: currentDate,
+        dayNumber: dayCounter,
+        date: new Date(currentDate),
       });
+      currentDate.setDate(currentDate.getDate() + 1);
+      dayCounter++;
     }
+    
     return days;
-  }, [firstMealDate]);
+  }, [firstMealDate, lastMealDate]);
 
 
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
+    <div className="bg-white dark:bg-gray-800/50 rounded-2xl shadow-lg h-full flex flex-col p-4">
       {users.length > 0 ? (
         dayRange.length > 0 ? (
-            <div className="overflow-x-auto relative border border-gray-200 rounded-lg">
-                <table className="min-w-full text-sm divide-y divide-gray-200">
-                    <thead className="bg-gray-100">
+            <div className="overflow-auto relative border border-gray-200/80 dark:border-gray-700 rounded-xl flex-1">
+                <table className="min-w-full text-base divide-y divide-gray-200/80 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-900">
                         <tr>
-                            <th scope="col" className="sticky left-0 bg-gray-100 px-4 py-3 text-center font-semibold text-gray-600 uppercase tracking-wider z-20 w-16 md:w-20 border-r">
+                            <th scope="col" className="sticky top-0 left-0 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-center font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider z-30 w-16 md:w-20 border-r border-b border-gray-200/80 dark:border-gray-700">
                                 Day
                             </th>
-                            <th scope="col" className="sticky left-16 md:left-20 bg-gray-100 px-4 py-3 text-left font-semibold text-gray-600 uppercase tracking-wider z-20 border-r">
+                            <th scope="col" className="sticky top-0 left-16 md:left-20 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-left font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider z-30 border-r border-b border-gray-200/80 dark:border-gray-700">
                                 Date
                             </th>
                             {sortedUsers.map(user => (
-                            <th key={user.id} scope="col" className="px-4 py-3 text-center font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                {user.name}
+                            <th key={user.id} scope="col" className="sticky top-0 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-center font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap z-20 border-b border-gray-200/80 dark:border-gray-700">
+                                {user.name.split(' ')[0]}
                             </th>
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200/80 dark:divide-gray-700">
                         {dayRange.map(item => {
                             // Generate the lookup key using local date parts.
                             const date = item.date;
@@ -102,38 +82,79 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
                             const dateStr = `${year}-${month}-${day}`;
 
                             return (
-                            <tr key={dateStr} className="group hover:bg-gray-50">
-                                <td className="sticky left-0 bg-white group-hover:bg-gray-50 px-4 py-3 whitespace-nowrap font-bold text-gray-500 text-center border-r z-10 w-16 md:w-20">
+                            <tr key={dateStr} className="group">
+                                <td className="sticky left-0 bg-white dark:bg-gray-800 group-hover:bg-gray-50/70 dark:group-hover:bg-gray-700/50 px-4 py-3 whitespace-nowrap font-bold text-gray-500 dark:text-gray-400 text-center border-r border-gray-200/80 dark:border-gray-700 z-10 w-16 md:w-20">
                                     {item.dayNumber}
                                 </td>
-                                <td className="sticky left-16 md:left-20 bg-white group-hover:bg-gray-50 px-4 py-3 whitespace-nowrap font-medium text-gray-800 border-r z-10">
-                                    {/* Display date using local timezone */}
-                                    {item.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                                <td className="sticky left-16 md:left-20 bg-white dark:bg-gray-800 group-hover:bg-gray-50/70 dark:group-hover:bg-gray-700/50 px-4 py-3 whitespace-nowrap font-medium text-gray-800 dark:text-gray-100 border-r border-gray-200/80 dark:border-gray-700 z-10">
+                                    {item.date.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' })}
                                 </td>
                                 {sortedUsers.map(user => {
-                                const mealCount = mealsByDate[dateStr]?.[user.id]?.mealCount ?? 0;
-                                return (
-                                    <td key={user.id} className="px-4 py-3 whitespace-nowrap text-center">
-                                        <span className={`font-bold text-base ${mealCount > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
-                                            {mealCount}
-                                        </span>
-                                    </td>
-                                );
+                                  const key = `${dateStr}-${user.id}`;
+                                  const transaction = mealMap.get(key);
+                                  
+                                  const mealCount = transaction 
+                                    ? (transaction.mealDetails ? Object.values(transaction.mealDetails).reduce((s: number, c: unknown) => s + (Number(c) || 0), 0) : transaction.mealCount ?? 0)
+                                    : 0;
+                                  
+                                  let className = 'font-bold text-sm inline-flex items-center justify-center px-3 py-1.5 rounded-full min-w-[32px]';
+
+                                  if (mealCount === 0) {
+                                      className += ' bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300';
+                                  } else if (mealCount === 1) {
+                                      className += ' bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300';
+                                  } else if (mealCount === 2) {
+                                      className += ' bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300';
+                                  } else { // mealCount > 2
+                                      className += ' bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300';
+                                  }
+                                  
+                                  const handleCellClick = () => {
+                                      const dataForSheet = transaction || {
+                                        userId: user.id,
+                                        date: item.date.toISOString(),
+                                      };
+                                      openSheet('meal', dataForSheet);
+                                  };
+
+                                  return (
+                                      <td key={user.id} className="px-4 py-3 whitespace-nowrap text-center cursor-pointer hover:bg-gray-100/80 dark:hover:bg-gray-700 transition-colors duration-150" onClick={handleCellClick}>
+                                          <span className={className}>
+                                              {mealCount}
+                                          </span>
+                                      </td>
+                                  );
                                 })}
                             </tr>
                             );
                         })}
                     </tbody>
+                    <tfoot className="bg-gray-50 dark:bg-gray-900 border-t-2 border-gray-200 dark:border-gray-700">
+                      <tr>
+                        <th scope="row" colSpan={2} className="sticky bottom-0 left-0 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-left font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider z-30 border-r border-t border-gray-200/80 dark:border-gray-700">
+                            Total Meals
+                        </th>
+                        {sortedUsers.map(user => {
+                          const userData = calculations.userData.find(ud => ud.user.id === user.id);
+                          const mealCount = userData?.userMealCount ?? 0;
+                          return (
+                            <td key={user.id} className="sticky bottom-0 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-center font-bold text-gray-800 dark:text-gray-100 z-20 border-t border-gray-200/80 dark:border-gray-700">
+                              {mealCount}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    </tfoot>
                 </table>
             </div>
         ) : (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
                 <p className="font-semibold">No Meals Logged Yet</p>
                 <p className="text-sm mt-1">Add a meal to start tracking in the calendar.</p>
             </div>
         )
       ) : (
-        <div className="text-center text-gray-500 py-8">
+        <div className="text-center text-gray-500 dark:text-gray-400 py-8">
             <p className="font-semibold">No Members Found</p>
             <p className="text-sm mt-1">Please add members to see the meal calendar.</p>
         </div>

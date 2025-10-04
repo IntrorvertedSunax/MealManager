@@ -9,9 +9,10 @@ interface TransactionListItemProps {
   onEdit: () => void;
   onDelete: () => void;
   runningBalance?: number;
+  hideRunningBalance?: boolean;
 }
 
-const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, users, onEdit, onDelete, runningBalance }) => {
+const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, users, onEdit, onDelete, runningBalance, hideRunningBalance }) => {
   const user = users.find(u => u.id === transaction.userId);
 
   if (transaction.type === 'meal') {
@@ -21,7 +22,7 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
   const isExpense = transaction.type === 'expense';
   
   const title = isExpense ? transaction.description : (user?.name || 'Unknown');
-  const amountColor = isExpense ? 'text-red-600' : 'text-green-600';
+  const amountColor = isExpense ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400';
   const sign = isExpense ? '-' : '+';
   
   const date = new Date(transaction.date);
@@ -30,17 +31,17 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
   const formattedDateTime = `${datePart}, ${timePart}`;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 space-y-3">
       {/* Top Section: Title, Date, Amount */}
       <div className="flex justify-between items-start">
         <div className="flex-grow pr-4">
           <div className="flex items-center gap-2 mb-1">
             <Badge type={transaction.type} />
-            <h3 className="font-bold text-gray-800 capitalize leading-tight">
+            <h3 className="font-bold text-gray-800 dark:text-gray-100 capitalize leading-tight">
               {title}
             </h3>
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {formattedDateTime}
           </p>
         </div>
@@ -49,7 +50,7 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
             {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(2)}
           </p>
           {isExpense && user && (
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               Paid by {user.name}
             </p>
           )}
@@ -57,30 +58,32 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
       </div>
 
       {/* Divider */}
-      <div className="border-t border-gray-200/80" />
+      <div className="border-t border-gray-200/80 dark:border-gray-700" />
 
       {/* Bottom Section: Balance and Actions */}
       <div className="flex justify-between items-center">
-        <div>
-          <p className="text-base">
-            <span className="text-gray-600">Balance:</span>
-            <span className="font-bold text-gray-800 ml-1">
-              <span className="font-black">৳</span>
-              {runningBalance !== undefined ? runningBalance.toFixed(0) : 'N/A'}
-            </span>
-          </p>
-        </div>
+        {runningBalance !== undefined && !hideRunningBalance ? (
+          <div>
+            <p className="text-base">
+              <span className="text-gray-600 dark:text-gray-300">Balance:</span>
+              <span className="font-bold text-gray-800 dark:text-gray-100 ml-1">
+                <span className="font-black">৳</span>
+                {runningBalance.toFixed(0)}
+              </span>
+            </p>
+          </div>
+        ) : <div />}
         <div className="flex items-center">
           <button 
             onClick={onEdit} 
-            className="p-1.5 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
+            className="p-1.5 rounded-full text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
             aria-label="Edit transaction"
           >
             <PencilIcon className="h-5 w-5" />
           </button>
           <button
             onClick={onDelete}
-            className="p-1.5 rounded-full text-red-500 hover:bg-red-100 transition-colors"
+            className="p-1.5 rounded-full text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
             aria-label="Delete transaction"
           >
             <TrashIcon className="h-5 w-5" />

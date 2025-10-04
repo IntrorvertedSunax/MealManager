@@ -32,7 +32,7 @@ const UserSelect: React.FC<UserSelectProps> = ({ users, selectedUserId, onChange
     setIsOpen(false);
   };
 
-  const buttonClasses = "w-full flex items-center gap-3 px-3 py-3 text-left bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
+  const buttonClasses = "w-full flex items-center gap-3 px-3 py-3 text-left bg-white dark:bg-gray-700 dark:border-gray-600 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -40,22 +40,22 @@ const UserSelect: React.FC<UserSelectProps> = ({ users, selectedUserId, onChange
         {selectedUser ? (
           <>
             <Avatar name={selectedUser.name} avatar={selectedUser.avatar} size="md-small" />
-            <span className="font-semibold text-gray-800 flex-grow">{selectedUser.name}</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-100 flex-grow">{selectedUser.name}</span>
           </>
         ) : (
           <>
-            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-400 flex items-center justify-center">
                 <UserIcon className="w-5 h-5" />
             </div>
-            <span className="text-gray-500 flex-grow">{placeholder}</span>
+            <span className="text-gray-500 dark:text-gray-400 flex-grow">{placeholder}</span>
           </>
         )}
-        <UpDownIcon className="text-gray-500 h-5 w-5" />
+        <UpDownIcon className="text-gray-500 dark:text-gray-400 h-5 w-5" />
       </button>
 
       {isOpen && (
         <ul
-          className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
+          className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black dark:ring-white ring-opacity-5 dark:ring-opacity-10 overflow-auto focus:outline-none sm:text-sm"
           tabIndex={-1}
           role="listbox"
           aria-label="Users"
@@ -65,7 +65,7 @@ const UserSelect: React.FC<UserSelectProps> = ({ users, selectedUserId, onChange
               <button
                 type="button"
                 onClick={() => handleSelect(user.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-left text-gray-900 transition-colors ${user.id === selectedUserId ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-left text-gray-900 dark:text-gray-100 transition-colors ${user.id === selectedUserId ? 'bg-blue-50 dark:bg-blue-900/50' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               >
                 <Avatar name={user.name} avatar={user.avatar} size="md-small" />
                 <span className="font-medium">{user.name}</span>

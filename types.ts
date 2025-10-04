@@ -13,7 +13,8 @@ export interface Transaction {
   date: string;
   amount: number; // Always positive.
   description: string;
-  mealCount?: number; // Only for 'meal' type
+  mealCount?: number; // Legacy, for backward compatibility
+  mealDetails?: Partial<Record<MealOption, number>>; // The new way to store meals
 }
 
 export interface DB {
@@ -21,7 +22,7 @@ export interface DB {
   transactions: Transaction[];
 }
 
-export type Page = 'home' | 'members' | 'expenses' | 'deposits' | 'transactions' | 'calendar';
+export type Page = 'home' | 'members' | 'expenses' | 'deposits' | 'transactions' | 'calendar' | 'settings';
 
 export type ModalType = TransactionType | 'user';
 
@@ -41,7 +42,15 @@ export interface AlertDialogConfig {
 
 export interface ToastMessage {
   id: number;
-  title: string;
+  title:string;
   description: string;
   type: 'success' | 'error';
+}
+
+export type MealOption = 'breakfast' | 'lunch' | 'dinner';
+
+export interface AppSettings {
+  enabledMeals: MealOption[];
+  defaultMealValues: Partial<Record<MealOption, number>>;
+  theme: 'light' | 'dark' | 'system';
 }

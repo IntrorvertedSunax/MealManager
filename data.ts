@@ -1,4 +1,4 @@
-import { User, Transaction, DB } from './types';
+import { User, Transaction, DB, AppSettings, MealOption } from './types';
 
 const DB_KEY = 'meal-management-db';
 
@@ -167,4 +167,61 @@ export const deleteTransaction = (transactionId: string): void => {
   let db = getDb();
   db.transactions = db.transactions.filter(t => t.id !== transactionId);
   saveDb(db);
+};
+
+// --- Settings ---
+
+const SETTINGS_KEY = 'meal-management-settings';
+
+const defaultSettings: AppSettings = {
+  enabledMeals: ['lunch', 'dinner'],
+  defaultMealValues: {
+    lunch: 1,
+    dinner: 1,
+  },
+  theme: 'system',
+};
+
+export const getSettings = (): AppSettings => {
+  try {
+    const data = localStorage.getItem(SETTINGS_KEY);
+    if (data) {
+      const parsed = JSON.parse(data);
+      // Merge with default settings to ensure new properties are present
+      return { 
+        ...defaultSettings, 
+        ...parsed,
+        defaultMealValues: {
+          ...defaultSettings.defaultMealValues,
+          ...(parsed.defaultMealValues || {})
+        } 
+      };
+    }
+  } catch (error) {
+    console.error("Failed to read settings from localStorage", error);
+  }
+  return defaultSettings;
+};
+
+export const saveSettings = (settings: Partial<AppSettings>): void => {
+  try {
+    const currentSettings = getSettings();
+    const newSettings = { ...currentSettings, ...settings };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
+  } catch (error) {
+    console.error("Failed to save settings to localStorage", error);
+  }
+};
+
+
+/**
+ * Resets all application data by clearing relevant keys from localStorage.
+ */
+export const resetAllData = (): void => {
+  try {
+    localStorage.removeItem(DB_KEY);
+    localStorage.removeItem(SETTINGS_KEY);
+  } catch (error) {
+    console.error("Failed to reset data in localStorage", error);
+  }
 };

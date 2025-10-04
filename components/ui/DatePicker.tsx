@@ -43,7 +43,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
     setIsOpen(false);
   };
 
-  const buttonBaseStyles = "w-full text-left py-3 bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200";
+  const buttonBaseStyles = "w-full text-left py-3 bg-white dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200";
   const buttonActiveStyles = "bg-orange-500 text-white border-orange-500 ring-orange-500";
   const iconActiveStyles = "text-white";
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Transaction } from '../../types';
 import { toast } from '../ui/Toaster';
 import Button from '../ui/Button';
-import { Input, FormField } from './FormControls';
+import { Input, FormField, Textarea } from './FormControls';
 import UserSelect from './UserSelect';
 import DatePicker from '../ui/DatePicker';
 
@@ -40,7 +40,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (name === 'amount' && value && !/^\d*\.?\d*$/.test(value)) {
         return;
@@ -107,7 +107,14 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
       </FormField>
       
       <FormField label="Description" error={errors.description}>
-        <Input type="text" name="description" value={formData.description || ''} onChange={handleInputChange} placeholder="e.g., Groceries, Rent" required />
+        <Textarea 
+            name="description" 
+            value={formData.description || ''} 
+            onChange={handleInputChange} 
+            placeholder="e.g., Groceries, Rent" 
+            required 
+            rows={3} 
+        />
       </FormField>
 
       <div className="pt-4">

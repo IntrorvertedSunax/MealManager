@@ -14,6 +14,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
+        darkMode: 'class', // Enable class-based dark mode
         theme: {
           extend: {
             fontFamily: {
@@ -21,6 +22,25 @@
               mono: ['monospace']
             }
           }
+        }
+      }
+    </script>
+
+    <!-- This script is placed in the head to prevent FOUC (Flash of Unstyled Content) -->
+    <script>
+      try {
+        const settings = JSON.parse(localStorage.getItem('meal-management-settings'));
+        const theme = settings?.theme || 'system';
+
+        if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {
+        // Fallback if settings are not parsable or not present
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
         }
       }
     </script>
@@ -70,7 +90,7 @@
   }
 </style>
 </head>
-  <body class="bg-gray-100 font-sans">
+  <body class="bg-gray-100 dark:bg-gray-900 font-sans">
     <div id="root"></div>
     <div id="toaster-container"></div>
     <script type="module" src="/index.tsx"></script>

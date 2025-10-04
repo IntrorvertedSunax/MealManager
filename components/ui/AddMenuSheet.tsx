@@ -13,25 +13,25 @@ const AddMenuSheet: React.FC<AddMenuSheetProps> = ({ isOpen, onClose, onSelect }
   const MenuButton: React.FC<{ icon: React.ReactNode, label: string, onClick: () => void }> = ({ icon, label, onClick }) => (
     <button
       onClick={onClick}
-      className="w-full flex items-center p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+      className="w-full flex items-center p-4 text-left bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
     >
-      <div className="p-2 bg-gray-200 rounded-full mr-4 text-gray-600">
+      <div className="p-2 bg-gray-200 dark:bg-gray-600 rounded-full mr-4 text-gray-600 dark:text-gray-300">
         {icon}
       </div>
-      <span className="font-semibold text-gray-800 text-lg">{label}</span>
+      <span className="font-semibold text-gray-800 dark:text-gray-100 text-lg">{label}</span>
     </button>
   );
 
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-end transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={onClose}>
-      <div className={`bg-white rounded-t-2xl shadow-xl w-full max-w-lg transform transition-transform duration-300 ${isOpen ? 'translate-y-0' : 'translate-y-full'}`} onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b">
+      <div className={`bg-white dark:bg-gray-800 rounded-t-2xl shadow-xl w-full max-w-lg transform transition-transform duration-300 ${isOpen ? 'translate-y-0' : 'translate-y-full'}`} onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b dark:border-gray-700">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-xl font-bold text-gray-800">Add New</h2>
-              <p className="text-sm text-gray-500">Log a new meal, deposit, expense or member.</p>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Add New</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Log a new meal, deposit, expense or member.</p>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><XIcon /></button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"><XIcon /></button>
           </div>
         </div>
 
@@ -41,8 +41,8 @@ const AddMenuSheet: React.FC<AddMenuSheetProps> = ({ isOpen, onClose, onSelect }
           <MenuButton icon={<ReceiptIcon />} label="Add Expense" onClick={() => onSelect('expense')} />
 
           <div className="relative my-2">
-            <hr className="border-gray-200" />
-            <span className="absolute left-1/2 -translate-x-1/2 -top-2 bg-white px-2 text-xs text-gray-400">Or</span>
+            <hr className="border-gray-200 dark:border-gray-600" />
+            <span className="absolute left-1/2 -translate-x-1/2 -top-2 bg-white dark:bg-gray-800 px-2 text-xs text-gray-400 dark:text-gray-500">Or</span>
           </div>
           
           <MenuButton icon={<UserPlusIcon />} label="Add New Member" onClick={() => onSelect('user')} />

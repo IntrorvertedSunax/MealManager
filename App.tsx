@@ -9,15 +9,17 @@ import AlertDialog from './components/ui/AlertDialog';
 import AddMenuSheet from './components/ui/AddMenuSheet';
 import DashboardCard from './components/dashboard/DashboardCard';
 import CalendarPage from './components/calendar/CalendarPage';
+import SettingsPage from './components/settings/SettingsPage';
 import { toast } from './components/ui/Toaster';
 import { 
-  HomeIcon, UserGroupIcon, ClipboardListIcon, CalendarIcon, ReceiptIcon, DepositIcon,
-  MenuIcon, XIcon, PlusIcon, UserPlusIcon, SearchIcon
+  HomeIcon, UserGroupIcon, ClipboardListIcon, CalendarIcon, SettingsIcon,
+  MenuIcon, XIcon, PlusIcon, SearchIcon
 } from './components/ui/Icons';
 import { Input } from './components/forms/FormControls';
 import Button from './components/ui/Button';
 import { calculateMetrics, CalculationMetrics } from './logic';
 import * as db from './data';
+import ResetConfirmationDialog from './components/settings/ResetConfirmationDialog';
 
 // --- Page Components ---
 
@@ -49,13 +51,13 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate }: {
   return (
     <div className="space-y-6">
       <div className="flex justify-center">
-        <div className="bg-white rounded-xl shadow-md flex items-stretch overflow-hidden">
-          <div className="bg-gray-100 py-2 px-4 flex flex-col items-center justify-center">
-            <p className="text-xs font-bold text-gray-500">Day</p>
-            <p className="text-3xl font-bold text-gray-800">{dayCount}</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md flex items-stretch overflow-hidden">
+          <div className="bg-gray-100 dark:bg-gray-700 py-2 px-4 flex flex-col items-center justify-center">
+            <p className="text-xs font-bold text-gray-500 dark:text-gray-400">Day</p>
+            <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">{dayCount}</p>
           </div>
           <div className="flex items-center p-3 px-5">
-            <p className="font-semibold text-gray-700 text-lg">{currentDate}</p>
+            <p className="font-semibold text-gray-700 dark:text-gray-200 text-lg">{currentDate}</p>
           </div>
         </div>
       </div>
@@ -70,12 +72,12 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate }: {
       <div className="grid grid-cols-2 gap-4">
           <DashboardCard title="Total Meals" value={calculations.totalMealCount} />
           <DashboardCard title="Current Meal Rate" value={calculations.mealRate} formatAs="currency" precision={2} />
-          <DashboardCard title="Total Deposits" value={calculations.totalDeposits} formatAs="currency" onClick={() => handleNavigate('deposits')} />
-          <DashboardCard title="Total Expenses" value={calculations.totalExpenses} formatAs="currency" onClick={() => handleNavigate('expenses')} />
+          <DashboardCard title="Total Deposits" value={calculations.totalDeposits} formatAs="currency" onClick={() => handleNavigate('deposits')} variant="positive" />
+          <DashboardCard title="Total Expenses" value={calculations.totalExpenses} formatAs="currency" onClick={() => handleNavigate('expenses')} variant="negative" />
       </div>
       
-      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Member Balances</h2>
+      <div className="bg-white dark:bg-gray-800/50 p-4 sm:p-6 rounded-2xl shadow-lg">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Member Balances</h2>
         <div className="space-y-4">
           {calculations.userData.map(data => (
             <FlatmateBalanceCard key={data.user.id} user={data.user} balance={data.balance} mealCount={data.userMealCount} totalDeposit={data.userDeposits} mealCost={data.userMealCost} onHistoryClick={() => handleNavigate('transactions', data.user.id)} />
@@ -92,9 +94,9 @@ const MembersPage = ({ users, openSheet, confirmRemoveUser }: {
   confirmRemoveUser: (user: User) => void;
 }) => {
   return (
-      <div className="bg-white p-6 rounded-2xl shadow-lg space-y-4">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg space-y-4">
           <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-700">All Members</h2>
+              <h2 className="text-xl font-bold text-gray-700 dark:text-gray-200">All Members</h2>
               <Button onClick={() => openSheet('user')} className="rounded-lg">
                   <PlusIcon className="h-5 w-5 mr-1" />
                   Add Member
@@ -103,12 +105,13 @@ const MembersPage = ({ users, openSheet, confirmRemoveUser }: {
 
           <div className="space-y-3">
               {users.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No members yet. Add one to get started!</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-4">No members yet. Add one to get started!</p>
               ) : (
                   users.map(user =>
                       <MemberCard
                           key={user.id}
                           user={user}
+                          onEdit={() => openSheet('user', user)}
                           onRemove={() => confirmRemoveUser(user)}
                       />
                   )
@@ -181,32 +184,51 @@ const TransactionsPage = ({
   return (
     <div className="space-y-4">
       {userBalanceData && (
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
-           <h3 className="font-semibold text-gray-600">Current Balance</h3>
-           <p className={`font-bold text-2xl ${userBalanceData.balance >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-              {userBalanceData.balance < 0 && '-'}<span className="font-black">৳</span>{Math.abs(userBalanceData.balance).toFixed(0)}
-           </p>
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold text-gray-600 dark:text-gray-300">Current Balance</h3>
+              <p className={`font-bold text-2xl ${userBalanceData.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                  {userBalanceData.balance < 0 && '-'}<span className="font-black">৳</span>{Math.abs(userBalanceData.balance).toFixed(0)}
+              </p>
+          </div>
+          <hr className="my-3 border-gray-100 dark:border-gray-700" />
+          <div className="grid grid-cols-3 text-center gap-2">
+              <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Total Meals</p>
+                  <p className="font-bold text-gray-800 dark:text-gray-100 text-lg">{userBalanceData.userMealCount}</p>
+              </div>
+              <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Total Deposit</p>
+                  <p className="font-bold text-gray-800 dark:text-gray-100 text-lg"><span className="font-black">৳</span>{userBalanceData.userDeposits.toFixed(0)}</p>
+              </div>
+              <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Total Meal Cost</p>
+                  <p className="font-bold text-gray-800 dark:text-gray-100 text-lg"><span className="font-black">৳</span>{userBalanceData.userMealCost.toFixed(0)}</p>
+              </div>
+          </div>
         </div>
       )}
 
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <div className="relative">
-          <Input
-            leadingIcon={<SearchIcon className="h-5 w-5" />}
-            type="text"
-            placeholder="Search by description or name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Search transactions"
-          />
+      {!filterUserId && (
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="relative">
+            <Input
+              leadingIcon={<SearchIcon className="h-5 w-5" />}
+              type="text"
+              placeholder="Search by description or name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search transactions"
+            />
+          </div>
         </div>
-      </div>
+      )}
   
       <div className="space-y-4">
         {transactionsToDisplay.length === 0 ? (
-          <div className="text-center text-gray-500 py-8 bg-white rounded-xl shadow-sm border border-gray-100">No transactions to display.</div>
+          <div className="text-center text-gray-500 dark:text-gray-400 py-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">No transactions to display.</div>
         ) : searchedItemsWithRunningBalance.length === 0 ? (
-          <div className="text-center text-gray-500 py-8 bg-white rounded-xl shadow-sm border border-gray-100">No results for "{searchQuery}"</div>
+          <div className="text-center text-gray-500 dark:text-gray-400 py-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">No results for "{searchQuery}"</div>
         ) : (
           searchedItemsWithRunningBalance.map(({ transaction, runningBalance }) => (
             <TransactionListItem
@@ -216,6 +238,7 @@ const TransactionsPage = ({
               onEdit={() => openSheet(transaction.type, transaction)}
               onDelete={() => confirmRemoveTransaction(transaction)}
               runningBalance={runningBalance}
+              hideRunningBalance={!!filterUserId}
             />
           ))
         )}
@@ -252,7 +275,7 @@ const DepositsPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
         <div className="relative">
           <Input
             leadingIcon={<SearchIcon className="h-5 w-5" />}
@@ -267,9 +290,9 @@ const DepositsPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
   
       <div className="space-y-4">
         {depositTransactions.length === 0 ? (
-          <div className="text-center text-gray-500 py-8 bg-white rounded-xl shadow-sm border border-gray-100">No deposits recorded.</div>
+          <div className="text-center text-gray-500 dark:text-gray-400 py-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">No deposits recorded.</div>
         ) : searchedItems.length === 0 ? (
-          <div className="text-center text-gray-500 py-8 bg-white rounded-xl shadow-sm border border-gray-100">No results for "{searchQuery}"</div>
+          <div className="text-center text-gray-500 dark:text-gray-400 py-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">No results for "{searchQuery}"</div>
         ) : (
           searchedItems.map(transaction => (
             <TransactionListItem
@@ -315,7 +338,7 @@ const ExpensesPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
         <div className="relative">
           <Input
             leadingIcon={<SearchIcon className="h-5 w-5" />}
@@ -330,9 +353,9 @@ const ExpensesPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
   
       <div className="space-y-4">
         {expenseTransactions.length === 0 ? (
-          <div className="text-center text-gray-500 py-8 bg-white rounded-xl shadow-sm border border-gray-100">No expenses recorded.</div>
+          <div className="text-center text-gray-500 dark:text-gray-400 py-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">No expenses recorded.</div>
         ) : searchedItems.length === 0 ? (
-          <div className="text-center text-gray-500 py-8 bg-white rounded-xl shadow-sm border border-gray-100">No results for "{searchQuery}"</div>
+          <div className="text-center text-gray-500 dark:text-gray-400 py-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">No results for "{searchQuery}"</div>
         ) : (
           searchedItems.map(transaction => (
             <TransactionListItem
@@ -353,24 +376,19 @@ const ExpensesPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
 // --- Main App Component ---
 
 const App: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [users, setUsers] = useState<User[]>(() => db.getDb().users);
+  const [transactions, setTransactions] = useState<Transaction[]>(() => db.getDb().transactions);
   const [page, setPage] = useState<Page>('home');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [sheetConfig, setSheetConfig] = useState<ModalConfig>({ isOpen: false, type: null, data: null });
   const [alertDialog, setAlertDialog] = useState<AlertDialogConfig>({ isOpen: false, title: '', description: '', onConfirm: () => {} });
+  const [isResetConfirmationOpen, setIsResetConfirmationOpen] = useState(false);
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
 
-  useEffect(() => {
-    const { users: storedUsers, transactions: storedTransactions } = db.getDb();
-    setUsers(storedUsers);
-    setTransactions(storedTransactions);
-  }, []);
-  
   useEffect(() => {
     setSearchQuery('');
   }, [page, filterUserId]);
@@ -395,6 +413,14 @@ const App: React.FC = () => {
     date.setHours(0, 0, 0, 0);
     return date;
   }, [transactions]);
+  
+  const lastMealDate = useMemo(() => {
+    const mealTransactions = transactions.filter(t => t.type === 'meal');
+    if (mealTransactions.length === 0) return null;
+    const date = new Date(Math.max(...mealTransactions.map(t => new Date(t.date).getTime())));
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, [transactions]);
 
   const handleNavigate = (newPage: Page, userId: string | null = null) => {
     setPage(newPage);
@@ -402,8 +428,8 @@ const App: React.FC = () => {
     setIsMenuOpen(false);
   };
   
-  const openSheet = (type: ModalType, data: Transaction | User | null = null) => {
-    setSheetConfig({ isOpen: true, type, data });
+  const openSheet = (type: ModalType, data: Transaction | User | Partial<Transaction> | null = null) => {
+    setSheetConfig({ isOpen: true, type, data: data as Transaction | User | null });
   };
   
   const closeSheet = () => setSheetConfig({ isOpen: false, type: null, data: null });
@@ -474,8 +500,8 @@ const App: React.FC = () => {
                     if (existingMeal) {
                         const updatedMeal = db.updateTransaction({
                             ...existingMeal,
-                            mealCount: txEntry.mealCount || 0,
-                            description: txEntry.description || `${txEntry.mealCount || 0} meal(s)`
+                            mealDetails: txEntry.mealDetails,
+                            description: txEntry.description,
                         });
                         nextTransactions = nextTransactions.map(t => t.id === updatedMeal.id ? updatedMeal : t);
                     } else {
@@ -484,8 +510,8 @@ const App: React.FC = () => {
                             userId: user.id,
                             date: dateForTransaction,
                             amount: 0,
-                            description: txEntry.description || `${txEntry.mealCount || 0} meal(s)`,
-                            mealCount: txEntry.mealCount || 0,
+                            description: txEntry.description,
+                            mealDetails: txEntry.mealDetails,
                         });
                         nextTransactions.push(newMeal);
                     }
@@ -515,8 +541,8 @@ const App: React.FC = () => {
                         if (existingMeal) {
                              const updatedMeal = db.updateTransaction({
                                 ...existingMeal,
-                                mealCount: txEntry.mealCount || 0,
-                                description: txEntry.description || `${txEntry.mealCount || 0} meal(s)`
+                                mealDetails: txEntry.mealDetails,
+                                description: txEntry.description,
                             });
                             setTransactions(transactions.map(t => t.id === updatedMeal.id ? updatedMeal : t));
                         } else {
@@ -526,7 +552,7 @@ const App: React.FC = () => {
                                 date: dateForTransaction,
                                 amount: 0,
                                 description: txEntry.description?.trim() || '',
-                                mealCount: txEntry.mealCount || 0,
+                                mealDetails: txEntry.mealDetails,
                             };
                             const newTransaction = db.addTransaction(newTransactionData);
                             setTransactions(prev => [...prev, newTransaction]);
@@ -538,7 +564,6 @@ const App: React.FC = () => {
                             date: dateForTransaction,
                             amount: txEntry.amount || 0,
                             description: txEntry.description?.trim() || '',
-                            mealCount: txEntry.mealCount || 0,
                         };
                         const newTransaction = db.addTransaction(newTransactionData);
                         setTransactions(prev => [...prev, newTransaction]);
@@ -548,6 +573,23 @@ const App: React.FC = () => {
         }
         toast.success('Success!', `${type.charAt(0).toUpperCase() + type.slice(1)} ${isEditing ? 'updated' : 'added'} successfully.`);
         closeSheet();
+
+        if (!isEditing) {
+          switch (type) {
+            case 'meal':
+              handleNavigate('calendar');
+              break;
+            case 'deposit':
+              handleNavigate('deposits');
+              break;
+            case 'expense':
+              handleNavigate('expenses');
+              break;
+            case 'user':
+              handleNavigate('members');
+              break;
+          }
+        }
     } catch (error) {
         const message = error instanceof Error ? error.message : `An unknown error occurred.`;
         toast.error('Error!', message);
@@ -599,6 +641,22 @@ const App: React.FC = () => {
     }, 300);
   };
   
+  const openResetConfirmationDialog = () => {
+    setIsResetConfirmationOpen(true);
+  };
+
+  const performActualReset = () => {
+    db.resetAllData();
+    const newDb = db.getDb(); // This creates and returns the default DB
+    
+    setUsers(newDb.users);
+    setTransactions(newDb.transactions);
+
+    toast.success('Data Reset', 'Application has been reset to its default state.');
+    setIsResetConfirmationOpen(false);
+    handleNavigate('home'); // Navigate to home page to show the fresh state
+  };
+  
   const filteredUserForTitle = useMemo(() => filterUserId ? users.find(u => u.id === filterUserId) : null, [filterUserId, users]);
   const transactionPageTitle = filteredUserForTitle ? `${filteredUserForTitle.name}'s History` : 'Transaction History';
 
@@ -606,9 +664,10 @@ const App: React.FC = () => {
     home: { title: 'Meal Management', component: <HomePage firstMealDate={firstMealDate} calculations={calculations} handleNavigate={handleNavigate} /> },
     members: { title: 'Members', component: <MembersPage users={users} openSheet={openSheet} confirmRemoveUser={confirmRemoveUser} /> },
     transactions: { title: transactionPageTitle, component: <TransactionsPage {...{filterUserId, users, calculations, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction}} /> },
-    calendar: { title: 'Meal Calendar', component: <CalendarPage users={users} transactions={transactions} firstMealDate={firstMealDate} /> },
+    calendar: { title: 'Meal Calendar', component: <CalendarPage users={users} transactions={transactions} firstMealDate={firstMealDate} lastMealDate={lastMealDate} calculations={calculations} openSheet={openSheet} /> },
     deposits: { title: 'All Deposits', component: <DepositsPage {...{users, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction}} /> },
     expenses: { title: 'All Expenses', component: <ExpensesPage {...{users, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction}} /> },
+    settings: { title: 'Settings', component: <SettingsPage onDataReset={openResetConfirmationDialog} /> },
   };
 
   const ActivePage = pageConfig[page].component;
@@ -618,20 +677,21 @@ const App: React.FC = () => {
     { page: 'members', label: 'Members', icon: <UserGroupIcon className="h-5 w-5"/> },
     { page: 'transactions', label: 'History', icon: <ClipboardListIcon className="h-5 w-5"/> },
     { page: 'calendar', label: 'Calendar', icon: <CalendarIcon className="h-5 w-5"/> },
+    { page: 'settings', label: 'Settings', icon: <SettingsIcon className="h-5 w-5" /> },
   ];
 
   const Sidebar = () => (
-    <aside className="w-64 bg-white shadow-md hidden md:flex flex-col">
-      <div className="p-6 text-2xl font-bold text-blue-700 border-b">Meal Mng.</div>
+    <aside className="w-64 bg-white dark:bg-gray-800 dark:border-r dark:border-gray-700 shadow-md hidden md:flex flex-col">
+      <div className="p-6 text-2xl font-bold text-blue-700 dark:text-blue-400 border-b dark:border-gray-700">Meal Mng.</div>
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map(item => (
-          <button key={item.page} onClick={() => handleNavigate(item.page)} className={`w-full flex items-center px-4 py-2 rounded-lg text-left transition-colors ${page === item.page ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <button key={item.page} onClick={() => handleNavigate(item.page)} className={`w-full flex items-center px-4 py-2 rounded-lg text-left transition-colors ${page === item.page ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'}`}>
             <span className="mr-3">{item.icon}</span>
             {item.label}
           </button>
         ))}
       </nav>
-      <div className="p-4 border-t">
+      <div className="p-4 border-t dark:border-gray-700">
         <Button onClick={() => setIsAddMenuOpen(true)} className="w-full">
           <span className="mr-2"><PlusIcon className="h-5 w-5"/></span> Add New
         </Button>
@@ -640,9 +700,9 @@ const App: React.FC = () => {
   );
   
   const BottomNav = () => (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_5px_rgba(0,0,0,0.1)] h-16 z-50">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 dark:shadow-[0_-2px_5px_rgba(0,0,0,0.3)] h-16 z-50">
       <div className="grid grid-cols-3 h-full items-center">
-        <button onClick={() => handleNavigate('home')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'home' ? 'text-blue-600' : 'text-gray-500'}`}>
+        <button onClick={() => handleNavigate('home')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'home' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
           <HomeIcon className="h-5 w-5"/>
           <span>Home</span>
         </button>
@@ -655,7 +715,7 @@ const App: React.FC = () => {
                 <PlusIcon className="h-8 w-8"/>
             </button>
         </div>
-        <button onClick={() => handleNavigate('members')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'members' ? 'text-blue-600 font-bold' : 'text-gray-500'}`}>
+        <button onClick={() => handleNavigate('members')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'members' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'}`}>
           <UserGroupIcon className="h-5 w-5"/>
           <span>Members</span>
         </button>
@@ -665,24 +725,24 @@ const App: React.FC = () => {
 
   const MobileMenu = () => (
      <div className={`fixed inset-0 bg-black bg-opacity-50 z-[60] transition-opacity duration-300 ease-in-out ${isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMenuOpen(false)}>
-      <div className={`fixed top-0 left-0 bottom-0 w-64 bg-white shadow-lg p-4 transform transition-transform duration-300 ease-in-out ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-blue-700">Menu</h2><button onClick={() => setIsMenuOpen(false)}><XIcon /></button></div>
-        <nav className="space-y-2">{navItems.map(item => (<button key={item.page} onClick={() => handleNavigate(item.page)} className={`w-full flex items-center px-4 py-2 rounded-lg text-left transition-colors ${page === item.page ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}><span className="mr-3">{item.icon}</span>{item.label}</button>))}
+      <div className={`fixed top-0 left-0 bottom-0 w-64 bg-white dark:bg-gray-800 shadow-lg p-4 transform transition-transform duration-300 ease-in-out ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-blue-700 dark:text-blue-400">Menu</h2><button onClick={() => setIsMenuOpen(false)} className="text-gray-500 dark:text-gray-300"><XIcon /></button></div>
+        <nav className="space-y-2">{navItems.map(item => (<button key={item.page} onClick={() => handleNavigate(item.page)} className={`w-full flex items-center px-4 py-2 rounded-lg text-left transition-colors ${page === item.page ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'}`}><span className="mr-3">{item.icon}</span>{item.label}</button>))}
         </nav>
       </div>
     </div>
   );
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header 
           title={pageConfig[page].title} 
           onOpenMenu={() => setIsMenuOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-          <div key={page + (filterUserId || '')} className="max-w-4xl mx-auto fade-in">
+        <main className={`flex-1 overflow-y-auto ${page === 'calendar' ? 'px-1' : 'p-4 md:p-6'} pb-20 md:pb-6`}>
+          <div key={page + (filterUserId || '')} className={`max-w-4xl mx-auto fade-in ${page === 'calendar' ? 'h-full' : ''}`}>
             {ActivePage}
           </div>
         </main>
@@ -705,6 +765,11 @@ const App: React.FC = () => {
        <AlertDialog
         config={alertDialog}
         onClose={closeAlertDialog}
+      />
+      <ResetConfirmationDialog
+        isOpen={isResetConfirmationOpen}
+        onClose={() => setIsResetConfirmationOpen(false)}
+        onConfirm={performActualReset}
       />
     </div>
   );
