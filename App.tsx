@@ -13,20 +13,22 @@ import SettingsPage from './components/settings/SettingsPage';
 import { toast } from './components/ui/Toaster';
 import { 
   HomeIcon, UserGroupIcon, ClipboardListIcon, CalendarIcon, SettingsIcon,
-  MenuIcon, XIcon, PlusIcon, SearchIcon
+  MenuIcon, XIcon, PlusIcon, SearchIcon, ChevronRightIcon, DepositIcon, ReceiptIcon, UserPlusIcon
 } from './components/ui/Icons';
 import { Input } from './components/forms/FormControls';
 import Button from './components/ui/Button';
+import Badge from './components/ui/Badge';
 import { calculateMetrics, CalculationMetrics } from './logic';
 import * as db from './data';
 import ResetConfirmationDialog from './components/settings/ResetConfirmationDialog';
 
 // --- Page Components ---
 
-const HomePage = ({ firstMealDate, calculations, handleNavigate }: { 
+const HomePage = ({ firstMealDate, calculations, handleNavigate, openSheet }: { 
   firstMealDate: Date | null;
   calculations: CalculationMetrics;
   handleNavigate: (page: Page, userId?: string | null) => void;
+  openSheet: (type: 'user', data?: User | null) => void;
 }) => {
   const dayCount = useMemo(() => {
     if (!firstMealDate) return 0;
@@ -62,9 +64,9 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate }: {
         </div>
       </div>
       
-      <div className="bg-blue-600 text-white p-5 rounded-2xl shadow-lg text-center">
-        <p className="font-medium text-base text-blue-100">Remaining Balance</p>
-        <p className={`text-6xl font-bold tracking-tight ${calculations.remainingBalance >= 0 ? 'text-white' : 'text-yellow-300'}`}>
+      <div className="bg-blue-600 text-white p-3 rounded-2xl shadow-lg text-center">
+        <p className="font-medium text-sm text-blue-100">Remaining Balance</p>
+        <p className={`text-4xl font-bold tracking-tight ${calculations.remainingBalance >= 0 ? 'text-white' : 'text-yellow-300'}`}>
           {calculations.remainingBalance < 0 && '-'}<span className="font-black">৳</span>{Math.abs(calculations.remainingBalance).toFixed(0)}
         </p>
       </div>
@@ -77,10 +79,19 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate }: {
       </div>
       
       <div className="bg-white dark:bg-gray-800/50 p-4 sm:p-6 rounded-2xl shadow-lg">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Member Balances</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Member Balances</h2>
+          <Button 
+            onClick={() => openSheet('user')}
+            className="py-1.5 px-3"
+          >
+            <UserPlusIcon className="h-4 w-4 mr-1.5" />
+            Add Member
+          </Button>
+        </div>
         <div className="space-y-4">
           {calculations.userData.map(data => (
-            <FlatmateBalanceCard key={data.user.id} user={data.user} balance={data.balance} mealCount={data.userMealCount} totalDeposit={data.userDeposits} mealCost={data.userMealCost} onHistoryClick={() => handleNavigate('transactions', data.user.id)} />
+            <FlatmateBalanceCard key={data.user.id} user={data.user} balance={data.balance} mealCount={data.userMealCount} totalDeposit={data.userDeposits} mealCost={data.userMealCost + data.userSharedExpenseCost} onHistoryClick={() => handleNavigate('transactions', data.user.id)} />
           ))}
         </div>
       </div>
@@ -121,6 +132,33 @@ const MembersPage = ({ users, openSheet, confirmRemoveUser }: {
   );
 };
 
+const SharedExpenseShareItem = ({ transaction, users, yourShare }: { transaction: Transaction, users: User[], yourShare: number }) => {
+  const payer = users.find(u => u.id === transaction.userId);
+  const formattedDate = new Date(transaction.date).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  });
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex justify-between items-start">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Badge type={transaction.type} />
+            <h3 className="font-bold text-gray-800 dark:text-gray-100 capitalize leading-tight">{transaction.description}</h3>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{formattedDate} • Paid by {payer?.name || 'Unknown'}</p>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p className="font-bold text-xl text-red-600 dark:text-red-400">
+            -<span className="font-black">৳</span>{yourShare.toFixed(2)}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Your Share</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TransactionsPage = ({
   filterUserId, users, calculations, sortedTransactions, searchQuery,
   setSearchQuery, openSheet, confirmRemoveTransaction
@@ -137,49 +175,40 @@ const TransactionsPage = ({
   const filteredUser = filterUserId ? users.find(u => u.id === filterUserId) : null;
   const userBalanceData = filteredUser ? calculations.userData.find(d => d.user.id === filteredUser.id) : null;
 
-  const transactionsToDisplay = useMemo(() => {
+  const historyItemsToDisplay = useMemo(() => {
     if (filteredUser) {
-      // For an individual's history, only show their deposits.
-      return sortedTransactions.filter(t => t.userId === filteredUser.id && t.type === 'deposit');
-    } else {
-      // For the main history, show all deposits and expenses.
-      return sortedTransactions.filter(t => t.type !== 'meal');
+      const userDeposits = sortedTransactions.filter(t => t.userId === filteredUser.id && t.type === 'deposit');
+      const userSharedExpenses = sortedTransactions.filter(t => t.type === 'shared-expense' && t.sharedWith?.includes(filteredUser.id));
+
+      const allHistoryItems: (
+        { itemType: 'deposit'; transaction: Transaction; date: Date } | 
+        { itemType: 'share'; transaction: Transaction; date: Date }
+      )[] = [
+        ...userDeposits.map(t => ({ itemType: 'deposit' as const, transaction: t, date: new Date(t.date) })),
+        ...userSharedExpenses.map(t => ({ itemType: 'share' as const, transaction: t, date: new Date(t.date) }))
+      ];
+      
+      return allHistoryItems.sort((a, b) => b.date.getTime() - a.date.getTime());
     }
+    // For the main history, show all deposits, expenses, and shared expenses.
+    return sortedTransactions.filter(t => t.type !== 'meal');
   }, [filteredUser, sortedTransactions]);
 
-  const allItemsWithRunningBalance = useMemo(() => {
-    const finalBalance = filterUserId
-      ? calculations.userData.find(d => d.user.id === filterUserId)?.balance ?? 0
-      : calculations.remainingBalance;
-
-    let currentBalance = finalBalance;
-    const itemsWithBalance: { transaction: Transaction; runningBalance: number }[] = [];
-
-    for (const transaction of transactionsToDisplay) {
-      itemsWithBalance.push({ transaction, runningBalance: currentBalance });
-      if (transaction.type === 'deposit') {
-        currentBalance -= transaction.amount;
-      } else if (transaction.type === 'expense') {
-        currentBalance += transaction.amount;
-      }
-    }
-    return itemsWithBalance;
-  }, [transactionsToDisplay, filterUserId, calculations]);
-
-  const searchedItemsWithRunningBalance = useMemo(() => {
+  const searchedItems = useMemo(() => {
     if (!searchQuery.trim()) {
-      return allItemsWithRunningBalance;
+      return historyItemsToDisplay;
     }
     const lowercasedQuery = searchQuery.toLowerCase();
 
-    return allItemsWithRunningBalance.filter(({ transaction: t }) => {
+    return historyItemsToDisplay.filter(itemOrTx => {
+      const t = 'itemType' in itemOrTx ? itemOrTx.transaction : itemOrTx;
       const user = users.find(u => u.id === t.userId);
       const userName = user ? user.name.toLowerCase() : '';
       const description = t.description ? t.description.toLowerCase() : '';
       
       return userName.includes(lowercasedQuery) || description.includes(lowercasedQuery);
     });
-  }, [searchQuery, allItemsWithRunningBalance, users]);
+  }, [searchQuery, historyItemsToDisplay, users]);
 
   return (
     <div className="space-y-4">
@@ -202,8 +231,8 @@ const TransactionsPage = ({
                   <p className="font-bold text-gray-800 dark:text-gray-100 text-lg"><span className="font-black">৳</span>{userBalanceData.userDeposits.toFixed(0)}</p>
               </div>
               <div>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">Total Meal Cost</p>
-                  <p className="font-bold text-gray-800 dark:text-gray-100 text-lg"><span className="font-black">৳</span>{userBalanceData.userMealCost.toFixed(0)}</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Total Cost</p>
+                  <p className="font-bold text-gray-800 dark:text-gray-100 text-lg"><span className="font-black">৳</span>{(userBalanceData.userMealCost + userBalanceData.userSharedExpenseCost).toFixed(0)}</p>
               </div>
           </div>
         </div>
@@ -225,22 +254,23 @@ const TransactionsPage = ({
       )}
   
       <div className="space-y-4">
-        {transactionsToDisplay.length === 0 ? (
+        {historyItemsToDisplay.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">No transactions to display.</div>
-        ) : searchedItemsWithRunningBalance.length === 0 ? (
+        ) : searchedItems.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">No results for "{searchQuery}"</div>
         ) : (
-          searchedItemsWithRunningBalance.map(({ transaction, runningBalance }) => (
-            <TransactionListItem
-              key={transaction.id}
-              transaction={transaction}
-              users={users}
-              onEdit={() => openSheet(transaction.type, transaction)}
-              onDelete={() => confirmRemoveTransaction(transaction)}
-              runningBalance={runningBalance}
-              hideRunningBalance={!!filterUserId}
-            />
-          ))
+          searchedItems.map((itemOrTx, index) => {
+            if ('itemType' in itemOrTx) { // User-specific history view
+              if (itemOrTx.itemType === 'deposit') {
+                return <TransactionListItem key={itemOrTx.transaction.id} transaction={itemOrTx.transaction} users={users} onEdit={() => openSheet('deposit', itemOrTx.transaction)} onDelete={() => confirmRemoveTransaction(itemOrTx.transaction)} hideRunningBalance={true} />;
+              } else { // 'share'
+                const share = itemOrTx.transaction.amount / (itemOrTx.transaction.sharedWith?.length || 1);
+                return <SharedExpenseShareItem key={`share-${itemOrTx.transaction.id}`} transaction={itemOrTx.transaction} users={users} yourShare={share} />;
+              }
+            } else { // General history view
+                return <TransactionListItem key={itemOrTx.id} transaction={itemOrTx} users={users} onEdit={() => openSheet(itemOrTx.type, itemOrTx)} onDelete={() => confirmRemoveTransaction(itemOrTx)} />;
+            }
+          })
         )}
       </div>
     </div>
@@ -318,7 +348,7 @@ const ExpensesPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
   confirmRemoveTransaction: (t: Transaction) => void;
 }) => {
   const expenseTransactions = useMemo(() =>
-    sortedTransactions.filter(t => t.type === 'expense'),
+    sortedTransactions.filter(t => t.type === 'expense' || t.type === 'shared-expense'),
   [sortedTransactions]);
 
   const searchedItems = useMemo(() => {
@@ -481,6 +511,8 @@ const App: React.FC = () => {
 
             if (!txEntry.userId) throw new Error('A user must be selected.');
             if (type !== 'meal' && (!txEntry.amount || txEntry.amount <= 0)) throw new Error('Amount must be greater than 0.');
+            if (type === 'shared-expense' && (!txEntry.sharedWith || txEntry.sharedWith.length === 0)) throw new Error('At least one member must share the expense.');
+
 
             if (type === 'meal' && txEntry.userId === 'all') {
                 if (isEditing) throw new Error("Cannot edit a meal entry for 'All' users.");
@@ -557,13 +589,14 @@ const App: React.FC = () => {
                             const newTransaction = db.addTransaction(newTransactionData);
                             setTransactions(prev => [...prev, newTransaction]);
                         }
-                    } else {
+                    } else { // deposit, expense, shared-expense
                         const newTransactionData: Omit<Transaction, 'id'> = {
                             type: type as TransactionType,
                             userId: txEntry.userId as string,
                             date: dateForTransaction,
                             amount: txEntry.amount || 0,
                             description: txEntry.description?.trim() || '',
+                            ...(type === 'shared-expense' && { sharedWith: txEntry.sharedWith })
                         };
                         const newTransaction = db.addTransaction(newTransactionData);
                         setTransactions(prev => [...prev, newTransaction]);
@@ -571,7 +604,7 @@ const App: React.FC = () => {
                 }
             }
         }
-        toast.success('Success!', `${type.charAt(0).toUpperCase() + type.slice(1)} ${isEditing ? 'updated' : 'added'} successfully.`);
+        toast.success('Success!', `${type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())} ${isEditing ? 'updated' : 'added'} successfully.`);
         closeSheet();
 
         if (!isEditing) {
@@ -583,6 +616,7 @@ const App: React.FC = () => {
               handleNavigate('deposits');
               break;
             case 'expense':
+            case 'shared-expense':
               handleNavigate('expenses');
               break;
             case 'user':
@@ -617,14 +651,15 @@ const App: React.FC = () => {
   };
 
   const confirmRemoveTransaction = (transaction: Transaction) => {
+    const typeLabel = transaction.type.replace('-', ' ');
     setAlertDialog({
       isOpen: true,
-      title: `Delete this ${transaction.type}?`,
-      description: `Are you sure you want to delete this ${transaction.type}? This action cannot be undone.`,
+      title: `Delete this ${typeLabel}?`,
+      description: `Are you sure you want to delete this ${typeLabel}? This action cannot be undone.`,
       onConfirm: () => {
         db.deleteTransaction(transaction.id);
         setTransactions(transactions.filter(t => t.id !== transaction.id));
-        toast.success('Deleted', `The ${transaction.type} has been deleted.`);
+        toast.success('Deleted', `The ${typeLabel} has been deleted.`);
         closeAlertDialog();
       }
     });
@@ -661,7 +696,7 @@ const App: React.FC = () => {
   const transactionPageTitle = filteredUserForTitle ? `${filteredUserForTitle.name}'s History` : 'Transaction History';
 
   const pageConfig: Record<Page, { title: string; component: React.ReactNode }> = {
-    home: { title: 'Meal Management', component: <HomePage firstMealDate={firstMealDate} calculations={calculations} handleNavigate={handleNavigate} /> },
+    home: { title: 'Meal Management', component: <HomePage firstMealDate={firstMealDate} calculations={calculations} handleNavigate={handleNavigate} openSheet={openSheet} /> },
     members: { title: 'Members', component: <MembersPage users={users} openSheet={openSheet} confirmRemoveUser={confirmRemoveUser} /> },
     transactions: { title: transactionPageTitle, component: <TransactionsPage {...{filterUserId, users, calculations, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction}} /> },
     calendar: { title: 'Meal Calendar', component: <CalendarPage users={users} transactions={transactions} firstMealDate={firstMealDate} lastMealDate={lastMealDate} calculations={calculations} openSheet={openSheet} /> },
@@ -673,11 +708,12 @@ const App: React.FC = () => {
   const ActivePage = pageConfig[page].component;
 
   const navItems: { page: Page, label: string, icon: React.ReactNode }[] = [
-    { page: 'home', label: 'Home', icon: <HomeIcon className="h-5 w-5"/> },
-    { page: 'members', label: 'Members', icon: <UserGroupIcon className="h-5 w-5"/> },
-    { page: 'transactions', label: 'History', icon: <ClipboardListIcon className="h-5 w-5"/> },
-    { page: 'calendar', label: 'Calendar', icon: <CalendarIcon className="h-5 w-5"/> },
-    { page: 'settings', label: 'Settings', icon: <SettingsIcon className="h-5 w-5" /> },
+    { page: 'home', label: 'Home', icon: <HomeIcon className="h-6 w-6"/> },
+    { page: 'transactions', label: 'History', icon: <ClipboardListIcon className="h-6 w-6"/> },
+    { page: 'members', label: 'Members', icon: <UserGroupIcon className="h-6 w-6"/> },
+    { page: 'deposits', label: 'Deposits', icon: <DepositIcon className="h-6 w-6"/> },
+    { page: 'expenses', label: 'Expenses', icon: <ReceiptIcon className="h-6 w-6"/> },
+    { page: 'settings', label: 'Settings', icon: <SettingsIcon className="h-6 w-6" /> },
   ];
 
   const Sidebar = () => (
@@ -685,8 +721,8 @@ const App: React.FC = () => {
       <div className="p-6 text-2xl font-bold text-blue-700 dark:text-blue-400 border-b dark:border-gray-700">Meal Mng.</div>
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map(item => (
-          <button key={item.page} onClick={() => handleNavigate(item.page)} className={`w-full flex items-center px-4 py-2 rounded-lg text-left transition-colors ${page === item.page ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'}`}>
-            <span className="mr-3">{item.icon}</span>
+          <button key={item.page} onClick={() => handleNavigate(item.page)} className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors font-bold text-base tracking-wide ${page === item.page ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'}`}>
+            <span className="mr-4">{item.icon}</span>
             {item.label}
           </button>
         ))}
@@ -715,9 +751,9 @@ const App: React.FC = () => {
                 <PlusIcon className="h-8 w-8"/>
             </button>
         </div>
-        <button onClick={() => handleNavigate('members')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'members' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'}`}>
-          <UserGroupIcon className="h-5 w-5"/>
-          <span>Members</span>
+        <button onClick={() => handleNavigate('transactions')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'transactions' || page === 'deposits' || page === 'expenses' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'}`}>
+          <ClipboardListIcon className="h-5 w-5"/>
+          <span>History</span>
         </button>
       </div>
     </nav>
@@ -727,7 +763,7 @@ const App: React.FC = () => {
      <div className={`fixed inset-0 bg-black bg-opacity-50 z-[60] transition-opacity duration-300 ease-in-out ${isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMenuOpen(false)}>
       <div className={`fixed top-0 left-0 bottom-0 w-64 bg-white dark:bg-gray-800 shadow-lg p-4 transform transition-transform duration-300 ease-in-out ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-blue-700 dark:text-blue-400">Menu</h2><button onClick={() => setIsMenuOpen(false)} className="text-gray-500 dark:text-gray-300"><XIcon /></button></div>
-        <nav className="space-y-2">{navItems.map(item => (<button key={item.page} onClick={() => handleNavigate(item.page)} className={`w-full flex items-center px-4 py-2 rounded-lg text-left transition-colors ${page === item.page ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'}`}><span className="mr-3">{item.icon}</span>{item.label}</button>))}
+        <nav className="space-y-2">{navItems.map(item => (<button key={item.page} onClick={() => handleNavigate(item.page)} className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors font-bold text-base tracking-wide ${page === item.page ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'}`}><span className="mr-4">{item.icon}</span>{item.label}</button>))}
         </nav>
       </div>
     </div>

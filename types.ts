@@ -4,7 +4,7 @@ export interface User {
   avatar: string | null;
 }
 
-export type TransactionType = 'meal' | 'expense' | 'deposit';
+export type TransactionType = 'meal' | 'expense' | 'deposit' | 'shared-expense';
 
 export interface Transaction {
   id: string;
@@ -15,6 +15,7 @@ export interface Transaction {
   description: string;
   mealCount?: number; // Legacy, for backward compatibility
   mealDetails?: Partial<Record<MealOption, number>>; // The new way to store meals
+  sharedWith?: string[]; // For shared expenses
 }
 
 export interface DB {

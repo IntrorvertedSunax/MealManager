@@ -34,10 +34,12 @@ const ThemeSettings = () => {
     saveSettings({ theme });
   };
 
+  // FIX: Refactored to store component references in the `themes` array instead of instantiated elements.
+  // This allows direct rendering with props, which is more type-safe and avoids issues with `React.cloneElement`.
   const themes = [
-    { name: 'system', label: 'System', icon: <ComputerDesktopIcon />, description: 'Follows OS setting' },
-    { name: 'light', label: 'Light', icon: <SunIcon /> },
-    { name: 'dark', label: 'Dark', icon: <MoonIcon /> },
+    { name: 'system', label: 'System', icon: ComputerDesktopIcon, description: 'Follows OS setting' },
+    { name: 'light', label: 'Light', icon: SunIcon },
+    { name: 'dark', label: 'Dark', icon: MoonIcon },
   ];
 
   return (
@@ -48,42 +50,45 @@ const ThemeSettings = () => {
       <fieldset>
         <legend className="sr-only">Theme selection</legend>
         <div className="space-y-3">
-          {themes.map(theme => (
-            <div key={theme.name}>
-              <input
-                type="radio"
-                id={theme.name}
-                name="theme"
-                value={theme.name}
-                checked={selectedTheme === theme.name}
-                onChange={() => handleThemeChange(theme.name as AppSettings['theme'])}
-                className="sr-only"
-              />
-              <label
-                htmlFor={theme.name}
-                className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                  selectedTheme === theme.name
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30'
-                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <div className={`mr-4 ${selectedTheme === theme.name ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                    {React.cloneElement(theme.icon as React.ReactElement, { className: 'h-6 w-6' })}
-                </div>
-                <div className="flex-grow">
-                  <span className="font-semibold text-gray-700 dark:text-gray-200">{theme.label}</span>
-                  {theme.description && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{theme.description}</p>
-                  )}
-                </div>
-                {selectedTheme === theme.name && (
-                  <div className="text-blue-600 dark:text-blue-400">
-                    <CheckIcon className="h-6 w-6" />
+          {themes.map(theme => {
+            const Icon = theme.icon;
+            return (
+              <div key={theme.name}>
+                <input
+                  type="radio"
+                  id={theme.name}
+                  name="theme"
+                  value={theme.name}
+                  checked={selectedTheme === theme.name}
+                  onChange={() => handleThemeChange(theme.name as AppSettings['theme'])}
+                  className="sr-only"
+                />
+                <label
+                  htmlFor={theme.name}
+                  className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                    selectedTheme === theme.name
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <div className={`mr-4 ${selectedTheme === theme.name ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <Icon className="h-6 w-6" />
                   </div>
-                )}
-              </label>
-            </div>
-          ))}
+                  <div className="flex-grow">
+                    <span className="font-semibold text-gray-700 dark:text-gray-200">{theme.label}</span>
+                    {theme.description && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{theme.description}</p>
+                    )}
+                  </div>
+                  {selectedTheme === theme.name && (
+                    <div className="text-blue-600 dark:text-blue-400">
+                      <CheckIcon className="h-6 w-6" />
+                    </div>
+                  )}
+                </label>
+              </div>
+            )
+          })}
         </div>
       </fieldset>
     </div>

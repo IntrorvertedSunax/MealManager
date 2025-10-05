@@ -1,6 +1,6 @@
 import React from 'react';
 import { ModalType } from '../../types';
-import { XIcon, MealIcon, DepositIcon, ReceiptIcon, UserPlusIcon } from './Icons';
+import { XIcon, MealIcon, DepositIcon, ReceiptIcon, UserPlusIcon, ScaleIcon } from './Icons';
 
 interface AddMenuSheetProps {
   isOpen: boolean;
@@ -39,13 +39,7 @@ const AddMenuSheet: React.FC<AddMenuSheetProps> = ({ isOpen, onClose, onSelect }
           <MenuButton icon={<MealIcon />} label="Add Meal" onClick={() => onSelect('meal')} />
           <MenuButton icon={<DepositIcon />} label="Add Deposit" onClick={() => onSelect('deposit')} />
           <MenuButton icon={<ReceiptIcon />} label="Add Expense" onClick={() => onSelect('expense')} />
-
-          <div className="relative my-2">
-            <hr className="border-gray-200 dark:border-gray-600" />
-            <span className="absolute left-1/2 -translate-x-1/2 -top-2 bg-white dark:bg-gray-800 px-2 text-xs text-gray-400 dark:text-gray-500">Or</span>
-          </div>
-          
-          <MenuButton icon={<UserPlusIcon />} label="Add New Member" onClick={() => onSelect('user')} />
+          <MenuButton icon={<ScaleIcon />} label="Add Shared Expense" onClick={() => onSelect('shared-expense')} />
         </div>
       </div>
     </div>

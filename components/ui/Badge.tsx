@@ -10,11 +10,14 @@ const Badge: React.FC<BadgeProps> = ({ type }) => {
     expense: 'bg-red-500 text-white',
     deposit: 'bg-gray-200 text-gray-800',
     meal: 'bg-blue-100 text-blue-800',
+    'shared-expense': 'bg-purple-500 text-white',
   };
+  
+  const label = type === 'shared-expense' ? 'Shared' : (type.charAt(0).toUpperCase() + type.slice(1));
 
   return (
     <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${config[type]}`}>
-      {type.charAt(0).toUpperCase() + type.slice(1)}
+      {label}
     </span>
   );
 };

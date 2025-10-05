@@ -7,6 +7,7 @@ export interface UserData {
   userExpensesPaid: number; // The total amount of expenses this user has personally paid for.
   userMealCount: number;
   userMealCost: number; // The total cost of meals consumed by this user.
+  userSharedExpenseCost: number; // The user's share of all shared expenses.
   balance: number;
 }
 
@@ -42,17 +43,19 @@ const getMealCount = (transaction: Transaction): number => {
  * @returns An object containing all calculated metrics.
  */
 export function calculateMetrics(users: User[], transactions: Transaction[]): CalculationMetrics {
-  const expenses = transactions.filter(t => t.type === 'expense');
+  const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'shared-expense');
   const deposits = transactions.filter(t => t.type === 'deposit');
   const meals = transactions.filter(t => t.type === 'meal');
+  const sharedExpenses = transactions.filter(t => t.type === 'shared-expense');
 
   // Calculate totals for the entire group
   const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
   const totalDeposits = deposits.reduce((sum, t) => sum + t.amount, 0);
   const totalMealCount = meals.reduce((sum, t) => sum + getMealCount(t), 0);
   
-  // The meal rate is the total cost of all expenses divided by the total number of meals.
-  const mealRate = totalMealCount > 0 ? totalExpenses / totalMealCount : 0;
+  // The meal rate is the total cost of all 'expense' transactions (assumed to be for food/groceries) divided by the total number of meals.
+  const mealRelatedExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  const mealRate = totalMealCount > 0 ? mealRelatedExpenses / totalMealCount : 0;
   
   // The overall remaining balance in the shared pool.
   const remainingBalance = totalDeposits - totalExpenses;
@@ -63,8 +66,8 @@ export function calculateMetrics(users: User[], transactions: Transaction[]): Ca
       .filter(t => t.userId === user.id)
       .reduce((sum, t) => sum + t.amount, 0);
       
-    const userExpensesPaid = expenses
-      .filter(t => t.userId === user.id)
+    const userExpensesPaid = transactions
+      .filter(t => (t.type === 'expense' || t.type === 'shared-expense') && t.userId === user.id)
       .reduce((sum, t) => sum + t.amount, 0);
 
     const userMealCount = meals
@@ -73,16 +76,24 @@ export function calculateMetrics(users: User[], transactions: Transaction[]): Ca
       
     const userMealCost = userMealCount * mealRate;
     
-    // The user's personal balance is their total deposits minus the cost of their meals.
-    // This model assumes expenses are paid from the collective deposit pool.
-    const balance = userDeposits - userMealCost;
+    const userSharedExpenseCost = sharedExpenses.reduce((sum, t) => {
+        if (t.sharedWith && t.sharedWith.includes(user.id)) {
+            const share = t.amount / (t.sharedWith.length || 1);
+            return sum + share;
+        }
+        return sum;
+    }, 0);
+    
+    // The user's personal balance is their total deposits minus their meal costs and their share of shared expenses.
+    const balance = userDeposits - userMealCost - userSharedExpenseCost;
 
     return { 
       user, 
       userDeposits, 
       userExpensesPaid, 
       userMealCount, 
-      userMealCost, 
+      userMealCost,
+      userSharedExpenseCost,
       balance 
     };
   });
