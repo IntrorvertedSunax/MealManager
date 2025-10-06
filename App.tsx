@@ -2,6 +2,9 @@
 
 
 
+
+
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { User, Transaction, TransactionType, Page, ModalConfig, AlertDialogConfig, ModalType } from './types';
 import Header from './components/ui/Header';
@@ -17,7 +20,7 @@ import SettingsPage from './components/settings/SettingsPage';
 import { toast } from './components/ui/Toaster';
 import { 
   HomeIcon, UserGroupIcon, ClipboardListIcon, CalendarIcon, SettingsIcon,
-  MenuIcon, XIcon, PlusIcon, SearchIcon, ChevronRightIcon, DepositIcon, ReceiptIcon, UserPlusIcon
+  MenuIcon, XIcon, PlusIcon, SearchIcon, ChevronRightIcon, DepositIcon, ReceiptIcon, UserPlusIcon, MoreHorizIcon
 } from './components/ui/Icons';
 import { Input } from './components/forms/FormControls';
 import Button from './components/ui/Button';
@@ -32,7 +35,7 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate, openSheet }: {
   firstMealDate: Date | null;
   calculations: CalculationMetrics;
   handleNavigate: (page: Page, userId?: string | null) => void;
-  openSheet: (type: 'user', data?: User | null) => void;
+  openSheet: (type: ModalType, data?: Transaction | User | Partial<Transaction> | null) => void;
 }) => {
   const dayCount = useMemo(() => {
     if (!firstMealDate) return 0;
@@ -53,6 +56,10 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate, openSheet }: {
     day: 'numeric',
     year: 'numeric',
   });
+  
+  const formatCurrencyWithCommas = (value: number) => {
+    return Math.abs(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
 
   return (
     <div className="space-y-4">
@@ -68,11 +75,23 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate, openSheet }: {
         </div>
       </div>
       
-      <div className="bg-teal-600 text-white p-3 rounded-2xl shadow-lg text-center">
-        <p className="font-medium text-base text-teal-100">Remaining Balance</p>
-        <p className={`text-4xl font-extrabold tracking-tight ${calculations.remainingBalance >= 0 ? 'text-white' : 'text-yellow-300'}`}>
-          {calculations.remainingBalance < 0 && '-'}<span className="font-black">৳</span>{Math.abs(calculations.remainingBalance).toFixed(0)}
-        </p>
+      <div className="bg-teal-600 text-white p-5 rounded-2xl shadow-lg flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-teal-100">Remaining Balance</p>
+          <p className={`text-4xl font-extrabold tracking-tight mt-1 ${calculations.remainingBalance < 0 ? 'text-yellow-300' : 'text-white'}`}>
+            {calculations.remainingBalance < 0 && '−'}
+            <span className="font-bold">৳</span>
+            {formatCurrencyWithCommas(calculations.remainingBalance)}
+          </p>
+        </div>
+        <button 
+          onClick={() => openSheet('deposit')}
+          className="bg-white/20 hover:bg-white/30 text-white font-semibold py-2.5 px-5 rounded-xl flex items-center gap-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-teal-600 focus:ring-white"
+          aria-label="Add a new deposit"
+        >
+          <PlusIcon className="h-5 w-5" />
+          <span>Deposit</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -778,25 +797,36 @@ const App: React.FC = () => {
   );
   
   const BottomNav = () => (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 dark:shadow-[0_-2px_5px_rgba(0,0,0,0.3)] h-16 z-50">
-      <div className="grid grid-cols-3 h-full items-center">
-        <button onClick={() => handleNavigate('home')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'home' ? 'text-teal-600 dark:text-teal-400' : 'text-slate-500 dark:text-slate-400'}`}>
-          <HomeIcon className="h-5 w-5"/>
-          <span>Home</span>
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 dark:shadow-[0_-4px_12px_-1px_rgba(0,0,0,0.1)] shadow-[0_-4px_12px_-1px_rgba(0,0,0,0.05)] h-20 z-50">
+      <div className="max-w-sm mx-auto h-full relative">
+        <button 
+            onClick={() => setIsAddMenuOpen(true)} 
+            className="absolute left-1/2 -translate-x-1/2 -top-7 w-16 h-16 bg-teal-600 text-white rounded-full flex items-center justify-center shadow-[0_10px_15px_-3px_rgba(13,148,136,0.4)] hover:bg-teal-700 transition-transform transform active:scale-95"
+            aria-label="Add New"
+        >
+            <PlusIcon className="h-8 w-8"/>
         </button>
-        <div className="relative flex justify-center">
-            <button 
-                onClick={() => setIsAddMenuOpen(true)} 
-                className="absolute -top-8 w-16 h-16 bg-teal-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-teal-700 transition-transform transform active:scale-95"
-                aria-label="Add New"
-            >
-                <PlusIcon className="h-8 w-8"/>
+        <div className="grid grid-cols-5 h-full items-center">
+            <button onClick={() => handleNavigate('home')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'home' ? 'text-teal-600 dark:text-teal-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+              <HomeIcon className="h-6 w-6"/>
+              <span>Home</span>
+            </button>
+            <button onClick={() => handleNavigate('members')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'members' ? 'text-teal-600 dark:text-teal-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+              <UserGroupIcon className="h-6 w-6"/>
+              <span>Members</span>
+            </button>
+            
+            <div />
+
+            <button onClick={() => handleNavigate('calendar')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'calendar' ? 'text-teal-600 dark:text-teal-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+              <CalendarIcon className="h-6 w-6"/>
+              <span>Calendar</span>
+            </button>
+            <button onClick={() => handleNavigate('settings')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'settings' ? 'text-teal-600 dark:text-teal-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+              <MoreHorizIcon className="h-6 w-6"/>
+              <span>More</span>
             </button>
         </div>
-        <button onClick={() => handleNavigate('transactions')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'transactions' || page === 'deposits' || page === 'expenses' ? 'text-teal-600 dark:text-teal-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>
-          <ClipboardListIcon className="h-5 w-5"/>
-          <span>History</span>
-        </button>
       </div>
     </nav>
   );

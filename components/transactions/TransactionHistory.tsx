@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { Transaction, User } from '../../types';
 import { PencilIcon, TrashIcon } from '../ui/Icons';
@@ -22,9 +20,6 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
   }
 
   const isExpenseType = transaction.type === 'expense' || transaction.type === 'shared-expense';
-  
-  let title = '';
-  let subtext: React.ReactNode = null;
   const amountColor = isExpenseType ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400';
   const sign = isExpenseType ? '-' : '+';
   
@@ -33,8 +28,63 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
   const timePart = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   const formattedDateTime = `${datePart}, ${timePart}`;
 
+  let title = '';
+  if (transaction.type === 'expense' || transaction.type === 'shared-expense') {
+    title = transaction.description;
+  } else { // deposit
+    title = user?.name || 'Unknown';
+  }
+
+  // Compact layout for Deposits & Expenses pages
+  if (hideRunningBalance) {
+    const sharedWithNames = transaction.type === 'shared-expense'
+      ? transaction.sharedWith
+          ?.map(id => users.find(u => u.id === id)?.name.split(' ')[0])
+          .filter(Boolean)
+          .join(', ')
+      : null;
+
+    return (
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-3">
+        <div className="flex justify-between items-center">
+          <div className="flex-grow pr-4">
+            <div className="flex items-center gap-2 mb-0.5">
+              <Badge type={transaction.type} />
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 capitalize leading-tight">
+                {title}
+              </h3>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {formattedDateTime}
+            </p>
+          </div>
+          
+          <div className="text-right flex-shrink-0">
+            <p className={`font-extrabold text-lg ${amountColor}`}>
+              {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(2)}
+            </p>
+            {isExpenseType && user && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Paid by {user.name}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {sharedWithNames && (
+          <div className="mt-2 pt-2 border-t border-slate-200/80 dark:border-slate-700">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Shared with: <span className="font-medium">{sharedWithNames}</span>
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Original layout for Transaction History page
+  let subtext: React.ReactNode = null;
   if (transaction.type === 'shared-expense') {
-      title = transaction.description;
       const sharedWithNames = transaction.sharedWith
           ?.map(id => users.find(u => u.id === id)?.name.split(' ')[0])
           .filter(Boolean)
@@ -44,10 +94,6 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
               Shared with: <span className="font-medium">{sharedWithNames}</span>
           </p>
       );
-  } else if (transaction.type === 'expense') {
-      title = transaction.description;
-  } else { // deposit
-      title = user?.name || 'Unknown';
   }
 
 
