@@ -8,8 +8,8 @@ interface BadgeProps {
 const Badge: React.FC<BadgeProps> = ({ type }) => {
   const config = {
     expense: 'bg-red-500 text-white',
-    deposit: 'bg-gray-200 text-gray-800',
-    meal: 'bg-blue-100 text-blue-800',
+    deposit: 'bg-sky-500 text-white',
+    meal: 'bg-teal-100 text-teal-800',
     'shared-expense': 'bg-purple-500 text-white',
   };
   

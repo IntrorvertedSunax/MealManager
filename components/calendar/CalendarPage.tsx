@@ -52,27 +52,27 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
 
 
   return (
-    <div className="bg-white dark:bg-gray-800/50 rounded-2xl shadow-lg h-full flex flex-col p-4">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg h-full flex flex-col p-4">
       {users.length > 0 ? (
         dayRange.length > 0 ? (
-            <div className="overflow-auto relative border border-gray-200/80 dark:border-gray-700 rounded-xl flex-1">
-                <table className="min-w-full text-base divide-y divide-gray-200/80 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-900">
+            <div className="overflow-auto relative border border-slate-200/80 dark:border-slate-700 rounded-xl flex-1">
+                <table className="min-w-full text-base divide-y divide-slate-200/80 dark:divide-slate-700">
+                    <thead className="bg-slate-50 dark:bg-slate-900">
                         <tr>
-                            <th scope="col" className="sticky top-0 left-0 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-center font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider z-30 w-16 md:w-20 border-r border-b border-gray-200/80 dark:border-gray-700">
+                            <th scope="col" className="sticky top-0 left-0 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-center font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider z-30 w-16 md:w-20 border-r border-b border-slate-200/80 dark:border-slate-700">
                                 Day
                             </th>
-                            <th scope="col" className="sticky top-0 left-16 md:left-20 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-left font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider z-30 border-r border-b border-gray-200/80 dark:border-gray-700">
+                            <th scope="col" className="sticky top-0 left-16 md:left-20 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-left font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider z-30 border-r border-b border-slate-200/80 dark:border-slate-700">
                                 Date
                             </th>
                             {sortedUsers.map(user => (
-                            <th key={user.id} scope="col" className="sticky top-0 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-center font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap z-20 border-b border-gray-200/80 dark:border-gray-700">
+                            <th key={user.id} scope="col" className="sticky top-0 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-center font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap z-20 border-b border-slate-200/80 dark:border-slate-700">
                                 {user.name.split(' ')[0]}
                             </th>
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200/80 dark:divide-gray-700">
+                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200/80 dark:divide-slate-700">
                         {dayRange.map(item => {
                             // Generate the lookup key using local date parts.
                             const date = item.date;
@@ -83,10 +83,10 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
 
                             return (
                             <tr key={dateStr} className="group">
-                                <td className="sticky left-0 bg-white dark:bg-gray-800 group-hover:bg-gray-50/70 dark:group-hover:bg-gray-700/50 px-4 py-3 whitespace-nowrap font-bold text-gray-500 dark:text-gray-400 text-center border-r border-gray-200/80 dark:border-gray-700 z-10 w-16 md:w-20">
+                                <td className="sticky left-0 bg-white dark:bg-slate-800 group-hover:bg-slate-50/70 dark:group-hover:bg-slate-700/50 px-4 py-3 whitespace-nowrap font-bold text-slate-500 dark:text-slate-400 text-center border-r border-slate-200/80 dark:border-slate-700 z-10 w-16 md:w-20">
                                     {item.dayNumber}
                                 </td>
-                                <td className="sticky left-16 md:left-20 bg-white dark:bg-gray-800 group-hover:bg-gray-50/70 dark:group-hover:bg-gray-700/50 px-4 py-3 whitespace-nowrap font-medium text-gray-800 dark:text-gray-100 border-r border-gray-200/80 dark:border-gray-700 z-10">
+                                <td className="sticky left-16 md:left-20 bg-white dark:bg-slate-800 group-hover:bg-slate-50/70 dark:group-hover:bg-slate-700/50 px-4 py-3 whitespace-nowrap font-medium text-slate-800 dark:text-slate-100 border-r border-slate-200/80 dark:border-slate-700 z-10">
                                     {item.date.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' })}
                                 </td>
                                 {sortedUsers.map(user => {
@@ -118,7 +118,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
                                   };
 
                                   return (
-                                      <td key={user.id} className="px-4 py-3 whitespace-nowrap text-center cursor-pointer hover:bg-gray-100/80 dark:hover:bg-gray-700 transition-colors duration-150" onClick={handleCellClick}>
+                                      <td key={user.id} className="px-4 py-3 whitespace-nowrap text-center cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-700 transition-colors duration-150" onClick={handleCellClick}>
                                           <span className={className}>
                                               {mealCount}
                                           </span>
@@ -129,16 +129,16 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
                             );
                         })}
                     </tbody>
-                    <tfoot className="bg-gray-50 dark:bg-gray-900 border-t-2 border-gray-200 dark:border-gray-700">
+                    <tfoot className="bg-slate-50 dark:bg-slate-900 border-t-2 border-slate-200 dark:border-slate-700">
                       <tr>
-                        <th scope="row" colSpan={2} className="sticky bottom-0 left-0 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-left font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider z-30 border-r border-t border-gray-200/80 dark:border-gray-700">
+                        <th scope="row" colSpan={2} className="sticky bottom-0 left-0 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-left font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider z-30 border-r border-t border-slate-200/80 dark:border-slate-700">
                             Total Meals
                         </th>
                         {sortedUsers.map(user => {
                           const userData = calculations.userData.find(ud => ud.user.id === user.id);
                           const mealCount = userData?.userMealCount ?? 0;
                           return (
-                            <td key={user.id} className="sticky bottom-0 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-center font-bold text-gray-800 dark:text-gray-100 z-20 border-t border-gray-200/80 dark:border-gray-700">
+                            <td key={user.id} className="sticky bottom-0 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-center font-bold text-slate-800 dark:text-slate-100 z-20 border-t border-slate-200/80 dark:border-slate-700">
                               {mealCount}
                             </td>
                           );
@@ -148,13 +148,13 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
                 </table>
             </div>
         ) : (
-            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+            <div className="text-center text-slate-500 dark:text-slate-400 py-8">
                 <p className="font-semibold">No Meals Logged Yet</p>
                 <p className="text-sm mt-1">Add a meal to start tracking in the calendar.</p>
             </div>
         )
       ) : (
-        <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+        <div className="text-center text-slate-500 dark:text-slate-400 py-8">
             <p className="font-semibold">No Members Found</p>
             <p className="text-sm mt-1">Please add members to see the meal calendar.</p>
         </div>

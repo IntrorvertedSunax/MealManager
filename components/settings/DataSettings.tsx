@@ -8,9 +8,9 @@ interface DataSettingsProps {
 
 const DataSettings: React.FC<DataSettingsProps> = ({ onReset }) => {
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-1">Data Management</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Manage your application's stored data.</p>
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">Data Management</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Manage your application's stored data.</p>
             
             <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-lg">
                 <div className="flex">
@@ -28,7 +28,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({ onReset }) => {
                 </div>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+            <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 flex justify-end">
                 <Button 
                     onClick={onReset} 
                     className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"

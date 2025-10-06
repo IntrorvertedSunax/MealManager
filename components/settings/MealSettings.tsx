@@ -78,13 +78,13 @@ const MealSettings = () => {
   ];
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
-      <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-1">Meal Options</h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Choose which meals are visible and set their default count for new entries.</p>
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">Meal Options</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Choose which meals are visible and set their default count for new entries.</p>
 
       <div className="space-y-4">
         {mealOptions.map(option => (
-          <div key={option.value} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div key={option.value} className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-700">
             <div className="flex items-center">
               <input
                 id={option.value}
@@ -92,12 +92,12 @@ const MealSettings = () => {
                 type="checkbox"
                 checked={currentSettings.enabledMeals.includes(option.value)}
                 onChange={(e) => handleMealSettingChange(option.value, e.target.checked)}
-                className="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 dark:bg-gray-900 dark:border-gray-600 rounded"
+                className="focus:ring-teal-500 h-5 w-5 text-teal-600 border-slate-300 dark:bg-slate-900 dark:border-slate-600 rounded"
               />
-              <label htmlFor={option.value} className="ml-3 font-medium text-gray-700 dark:text-gray-200">{option.label}</label>
+              <label htmlFor={option.value} className="ml-3 font-medium text-slate-700 dark:text-slate-200">{option.label}</label>
             </div>
             <div className="flex items-center gap-2">
-              <label htmlFor={`${option.value}-default`} className="text-sm text-gray-500 dark:text-gray-400">Default</label>
+              <label htmlFor={`${option.value}-default`} className="text-sm text-slate-500 dark:text-slate-400">Default</label>
               <input
                 id={`${option.value}-default`}
                 type="number"
@@ -106,7 +106,7 @@ const MealSettings = () => {
                 disabled={!currentSettings.enabledMeals.includes(option.value)}
                 value={currentSettings.defaultMealValues[option.value] ?? ''}
                 onChange={e => handleDefaultValueChange(option.value, e.target.value)}
-                className="w-20 text-center border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:disabled:bg-gray-800 dark:disabled:text-gray-400 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                className="w-20 text-center border-slate-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:disabled:bg-slate-800 dark:disabled:text-slate-400 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
                 aria-label={`Default value for ${option.label}`}
               />
             </div>
@@ -114,7 +114,7 @@ const MealSettings = () => {
         ))}
       </div>
 
-      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+      <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 flex justify-end">
           <Button onClick={handleSave} disabled={!hasChanges} variant="cta">
               Save Changes
           </Button>

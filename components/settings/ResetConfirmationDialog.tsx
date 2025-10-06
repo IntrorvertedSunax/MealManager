@@ -23,16 +23,16 @@ const ResetConfirmationDialog: React.FC<ResetConfirmationDialogProps> = ({ isOpe
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-[70] p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
         <div className="p-6">
           <div className="flex items-center text-red-500 dark:text-red-400 mb-3">
             <ExclamationIcon className="h-6 w-6 mr-2" />
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Are you absolutely sure?</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Are you absolutely sure?</h2>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
             This action <strong className="font-bold">cannot</strong> be undone. This will permanently delete all members, meals, and financial data.
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-4">
             Please type <strong className="font-bold text-red-600 dark:text-red-400">reset</strong> to confirm.
           </p>
           <div className="mt-4">
@@ -45,7 +45,7 @@ const ResetConfirmationDialog: React.FC<ResetConfirmationDialogProps> = ({ isOpe
             />
           </div>
         </div>
-        <div className="bg-gray-50 dark:bg-gray-700/50 px-6 py-3 flex justify-end gap-3 rounded-b-lg">
+        <div className="bg-slate-50 dark:bg-slate-700/50 px-6 py-3 flex justify-end gap-3 rounded-b-lg">
           <Button type="button" onClick={onClose} variant="secondary">
             Cancel
           </Button>

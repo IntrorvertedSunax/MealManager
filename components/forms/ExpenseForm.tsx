@@ -119,7 +119,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
 
       <div className="pt-4">
         <Button variant="cta" type="submit" disabled={isSubmitting} className="w-full justify-center py-3 text-base">
-            {isSubmitting ? 'Processing...' : `${isEditing ? 'Update' : 'Add'} Expense`}
+            {isSubmitting ? 'Processing...' : `${isEditing ? 'Update' : 'Add'} Meal Expense`}
         </Button>
       </div>
     </form>

@@ -27,7 +27,7 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateChange }) => {
     const daysInPrevMonth = getDaysInMonth(year, month - 1);
 
     for (let i = firstDay; i > 0; i--) {
-      days.push(<div key={`prev-${i}`} className="p-2 text-center text-gray-300 dark:text-gray-600">{daysInPrevMonth - i + 1}</div>);
+      days.push(<div key={`prev-${i}`} className="p-2 text-center text-slate-300 dark:text-slate-600">{daysInPrevMonth - i + 1}</div>);
     }
 
     for (let day = 1; day <= daysInMonth; day++) {
@@ -36,7 +36,7 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateChange }) => {
       
       const dayClasses = `
         w-9 h-9 flex items-center justify-center rounded-lg transition-colors cursor-pointer
-        ${isSelected ? 'bg-blue-600 text-white font-bold' : 'text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'}
+        ${isSelected ? 'bg-teal-600 text-white font-bold' : 'text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700'}
       `;
       days.push(
         <button key={day} type="button" onClick={() => onDateChange(currentDate)} className={dayClasses}>
@@ -48,7 +48,7 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateChange }) => {
     const totalCells = days.length > 35 ? 42 : 35;
     const daysFromNextMonth = totalCells - days.length;
     for (let i = 1; i <= daysFromNextMonth; i++) {
-        days.push(<div key={`next-${i}`} className="p-2 text-center text-gray-300 dark:text-gray-600">{i}</div>);
+        days.push(<div key={`next-${i}`} className="p-2 text-center text-slate-300 dark:text-slate-600">{i}</div>);
     }
     
     return days;
@@ -57,19 +57,19 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateChange }) => {
   const dayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 w-80 border border-gray-100 dark:border-gray-700">
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-4 w-80 border border-slate-100 dark:border-slate-700">
       <div className="flex justify-between items-center mb-4">
-        <button type="button" onClick={handlePrevMonth} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
+        <button type="button" onClick={handlePrevMonth} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400">
           <ChevronLeftIcon className="w-5 h-5" />
         </button>
-        <div className="font-semibold text-gray-800 dark:text-gray-100">
+        <div className="font-semibold text-slate-800 dark:text-slate-100">
           {displayDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
         </div>
-        <button type="button" onClick={handleNextMonth} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
+        <button type="button" onClick={handleNextMonth} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400">
           <ChevronRightIcon className="w-5 h-5" />
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-y-1 text-center text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">
+      <div className="grid grid-cols-7 gap-y-1 text-center text-xs text-slate-500 dark:text-slate-400 font-medium mb-2">
         {dayLabels.map(label => <div key={label}>{label}</div>)}
       </div>
       <div className="grid grid-cols-7 gap-y-1 justify-items-center">

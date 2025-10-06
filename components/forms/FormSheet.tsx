@@ -23,7 +23,7 @@ const FormSheet: React.FC<FormSheetProps> = ({ config, onClose, onSubmit, users,
 
   const titleConfig = {
     meal: { title: isEditing ? 'Edit Meal' : 'Add Meal', description: 'Log meals consumed by a flatmate.' },
-    expense: { title: isEditing ? 'Edit Expense' : 'Add Expense', description: 'Log a shared expense.' },
+    expense: { title: isEditing ? 'Edit Meal Expense' : 'Add Meal Expense', description: 'Log an expense for groceries or meals.' },
     'shared-expense': { title: isEditing ? 'Edit Shared Expense' : 'Add Shared Expense', description: 'Log a bill shared among members.' },
     deposit: { title: isEditing ? 'Edit Deposit' : 'Add Deposit', description: 'Log a financial contribution.' },
     user: { title: isEditing ? 'Edit Member' : 'Add New Member', description: 'Add a new flatmate to the system.' },

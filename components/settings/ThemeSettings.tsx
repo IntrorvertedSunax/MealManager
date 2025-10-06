@@ -43,9 +43,9 @@ const ThemeSettings = () => {
   ];
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
-      <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-1">Appearance</h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Select your preferred interface theme.</p>
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">Appearance</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Select your preferred interface theme.</p>
       
       <fieldset>
         <legend className="sr-only">Theme selection</legend>
@@ -67,21 +67,21 @@ const ThemeSettings = () => {
                   htmlFor={theme.name}
                   className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                     selectedTheme === theme.name
-                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30'
-                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      ? 'border-teal-600 bg-teal-50 dark:bg-teal-900/30'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
-                  <div className={`mr-4 ${selectedTheme === theme.name ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                  <div className={`mr-4 ${selectedTheme === theme.name ? 'text-teal-600 dark:text-teal-400' : 'text-slate-500 dark:text-slate-400'}`}>
                     <Icon className="h-6 w-6" />
                   </div>
                   <div className="flex-grow">
-                    <span className="font-semibold text-gray-700 dark:text-gray-200">{theme.label}</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">{theme.label}</span>
                     {theme.description && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{theme.description}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{theme.description}</p>
                     )}
                   </div>
                   {selectedTheme === theme.name && (
-                    <div className="text-blue-600 dark:text-blue-400">
+                    <div className="text-teal-600 dark:text-teal-400">
                       <CheckIcon className="h-6 w-6" />
                     </div>
                   )}

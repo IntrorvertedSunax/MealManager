@@ -109,7 +109,7 @@ const SharedExpenseForm: React.FC<SharedExpenseFormProps> = ({ data, onSubmit, i
   };
 
   return (
-    <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
+    <form onSubmit={handleFormSubmit} className="p-6 space-y-3">
       <FormField label="Date">
         <DatePicker value={date} onChange={setDate} />
       </FormField>
