@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { User, Transaction, TransactionType, Page, ModalConfig, AlertDialogConfig, ModalType } from './types';
 import Header from './components/ui/Header';
@@ -20,7 +13,7 @@ import SettingsPage from './components/settings/SettingsPage';
 import { toast } from './components/ui/Toaster';
 import { 
   HomeIcon, UserGroupIcon, ClipboardListIcon, CalendarIcon, SettingsIcon,
-  MenuIcon, XIcon, PlusIcon, SearchIcon, ChevronRightIcon, DepositIcon, ReceiptIcon, UserPlusIcon, MoreHorizIcon
+  MenuIcon, XIcon, PlusIcon, SearchIcon, ChevronRightIcon, DepositIcon, ReceiptIcon, UserPlusIcon
 } from './components/ui/Icons';
 import { Input } from './components/forms/FormControls';
 import Button from './components/ui/Button';
@@ -114,7 +107,7 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate, openSheet }: {
         </div>
         <div className="space-y-4">
           {calculations.userData.map(data => (
-            <FlatmateBalanceCard key={data.user.id} user={data.user} balance={data.balance} mealCount={data.userMealCount} totalDeposit={data.userDeposits} mealCost={data.userMealCost + data.userSharedExpenseCost} onHistoryClick={() => handleNavigate('transactions', data.user.id)} />
+            <FlatmateBalanceCard key={data.user.id} user={data.user} balance={data.balance} onHistoryClick={() => handleNavigate('transactions', data.user.id)} />
           ))}
         </div>
       </div>
@@ -777,17 +770,28 @@ const App: React.FC = () => {
     { page: 'settings', label: 'Settings', icon: <SettingsIcon className="h-6 w-6" /> },
   ];
 
+  const mainNavItems = navItems.filter(item => item.page !== 'settings');
+  const settingsNavItem = navItems.find(item => item.page === 'settings');
+
   const Sidebar = () => (
     <aside className="w-64 bg-white dark:bg-slate-800 dark:border-r dark:border-slate-700 shadow-md hidden md:flex flex-col">
       <div className="p-6 text-2xl font-bold text-teal-700 dark:text-teal-400 border-b dark:border-slate-700">Meal Mng.</div>
       <nav className="flex-1 p-4 space-y-2">
-        {navItems.map(item => (
+        {mainNavItems.map(item => (
           <button key={item.page} onClick={() => handleNavigate(item.page)} className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors font-bold text-base tracking-wide ${page === item.page ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/50'}`}>
             <span className="mr-4">{item.icon}</span>
             {item.label}
           </button>
         ))}
       </nav>
+      {settingsNavItem && (
+        <div className="p-4">
+          <button key={settingsNavItem.page} onClick={() => handleNavigate(settingsNavItem.page)} className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors font-bold text-base tracking-wide ${page === settingsNavItem.page ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/50'}`}>
+            <span className="mr-4">{settingsNavItem.icon}</span>
+            {settingsNavItem.label}
+          </button>
+        </div>
+      )}
       <div className="p-4 border-t dark:border-slate-700">
         <Button onClick={() => setIsAddMenuOpen(true)} className="w-full">
           <span className="mr-2"><PlusIcon className="h-5 w-5"/></span> Add New
@@ -822,9 +826,9 @@ const App: React.FC = () => {
               <CalendarIcon className="h-6 w-6"/>
               <span>Calendar</span>
             </button>
-            <button onClick={() => handleNavigate('settings')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'settings' ? 'text-teal-600 dark:text-teal-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
-              <MoreHorizIcon className="h-6 w-6"/>
-              <span>More</span>
+            <button onClick={() => handleNavigate('transactions')} className={`flex flex-col items-center justify-center text-xs gap-1 ${page === 'transactions' || page === 'deposits' || page === 'expenses' ? 'text-teal-600 dark:text-teal-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+              <ClipboardListIcon className="h-6 w-6"/>
+              <span>History</span>
             </button>
         </div>
       </div>
@@ -833,10 +837,18 @@ const App: React.FC = () => {
 
   const MobileMenu = () => (
      <div className={`fixed inset-0 bg-black bg-opacity-50 z-[60] transition-opacity duration-300 ease-in-out ${isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMenuOpen(false)}>
-      <div className={`fixed top-0 left-0 bottom-0 w-64 bg-white dark:bg-slate-800 shadow-lg p-4 transform transition-transform duration-300 ease-in-out ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
+      <div className={`fixed top-0 left-0 bottom-0 w-64 bg-white dark:bg-slate-800 shadow-lg p-4 transform transition-transform duration-300 ease-in-out flex flex-col ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-teal-700 dark:text-teal-400">Menu</h2><button onClick={() => setIsMenuOpen(false)} className="text-slate-500 dark:text-slate-300"><XIcon /></button></div>
-        <nav className="space-y-2">{navItems.map(item => (<button key={item.page} onClick={() => handleNavigate(item.page)} className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors font-bold text-base tracking-wide ${page === item.page ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/50'}`}><span className="mr-4">{item.icon}</span>{item.label}</button>))}
+        <nav className="flex-1 space-y-2">
+          {mainNavItems.map(item => (
+            <button key={item.page} onClick={() => handleNavigate(item.page)} className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors font-bold text-base tracking-wide ${page === item.page ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/50'}`}><span className="mr-4">{item.icon}</span>{item.label}</button>
+          ))}
         </nav>
+        {settingsNavItem && (
+          <div className="space-y-2">
+            <button key={settingsNavItem.page} onClick={() => handleNavigate(settingsNavItem.page)} className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors font-bold text-base tracking-wide ${page === settingsNavItem.page ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/50'}`}><span className="mr-4">{settingsNavItem.icon}</span>{settingsNavItem.label}</button>
+          </div>
+        )}
       </div>
     </div>
   );
