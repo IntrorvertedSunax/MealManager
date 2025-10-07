@@ -1,80 +1,87 @@
 /// <reference lib="webworker" />
+declare const workbox: any;
 
-const CACHE_NAME = 'meal-management-cache-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json'
-];
+// 1. Import Workbox from its official CDN.
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
 
-self.addEventListener('install', (event: ExtendableEvent) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Opened cache and caching basic assets');
-        return cache.addAll(urlsToCache);
-      })
-  );
-});
+// 2. Set up precaching for the application shell.
+// These files are cached upon installation, ensuring the app can always load.
+const { precacheAndRoute, createHandlerBoundToURL } = workbox.precaching;
+precacheAndRoute([
+  { url: '/', revision: 'v1' },
+  { url: '/index.html', revision: 'v1' },
+  { url: '/index.tsx', revision: 'v1' }, // Main application logic
+  { url: '/manifest.json', revision: 'v1' },
+  { url: '/icon-192x192.png', revision: 'v1' },
+  { url: '/icon-512x512.png', revision: 'v1' },
+]);
 
-self.addEventListener('activate', (event: ExtendableEvent) => {
-  const cacheWhitelist = [CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-});
+// 3. Set up routing for different types of requests.
+const { registerRoute, NavigationRoute } = workbox.routing;
+const { CacheFirst, StaleWhileRevalidate } = workbox.strategies;
+const { CacheableResponsePlugin } = workbox.cacheableResponse;
+const { ExpirationPlugin } = workbox.expiration;
 
-self.addEventListener('fetch', (event: FetchEvent) => {
-  // For SPAs, navigation requests should always serve the app shell (index.html).
-  // This allows the client-side router to handle deep links like /members or /calendar.
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      caches.match('/index.html').then((cachedResponse) => {
-        // Return index.html from cache, or fetch it if not available.
-        // This ensures the app loads, and the router can take over.
-        return cachedResponse || fetch(event.request);
-      })
-    );
-    return;
+// Handle SPA navigation. All navigation requests will be served the precached /index.html.
+const handler = createHandlerBoundToURL('/index.html');
+const navigationRoute = new NavigationRoute(handler);
+registerRoute(navigationRoute);
+
+
+// 4. Implement runtime caching strategies for assets loaded from CDNs.
+
+// Google Fonts Stylesheets: Use StaleWhileRevalidate to get updates in the background.
+registerRoute(
+  ({url}) => url.origin === 'https://fonts.googleapis.com',
+  new StaleWhileRevalidate({
+    cacheName: 'google-fonts-stylesheets',
+  })
+);
+
+// Google Fonts Webfonts: Use CacheFirst as they are versioned and rarely change.
+registerRoute(
+  ({url}) => url.origin === 'https://fonts.gstatic.com',
+  new CacheFirst({
+    cacheName: 'google-fonts-webfonts',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200], // Cache opaque responses for cross-origin requests
+      }),
+      new ExpirationPlugin({
+        maxAgeSeconds: 60 * 60 * 24 * 365, // Cache for 1 Year
+        maxEntries: 30,
+      }),
+    ],
+  })
+);
+
+// TailwindCSS from CDN: Use StaleWhileRevalidate.
+registerRoute(
+  ({url}) => url.origin === 'https://cdn.tailwindcss.com',
+  new StaleWhileRevalidate({
+    cacheName: 'tailwindcss-cdn',
+  })
+);
+
+// React & other libs from aistudiocdn.com: Use CacheFirst as these are versioned libraries.
+registerRoute(
+  ({url}) => url.origin === 'https://aistudiocdn.com',
+  new CacheFirst({
+    cacheName: 'aistudio-cdn-libs',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxAgeSeconds: 60 * 60 * 24 * 365, // Cache for 1 Year
+      }),
+    ],
+  })
+);
+
+// 5. Add a listener to activate the new service worker immediately.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    (self as any).skipWaiting();
   }
-
-  // For other requests (JS, CSS, images), use a cache-first strategy.
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-
-        // Not in cache, go to the network and cache the result.
-        return fetch(event.request).then(
-          (networkResponse) => {
-            // Check if we received a valid response to cache.
-            // Opaque responses are for cross-origin requests (like CDNs) and are OK to cache.
-            if (!networkResponse || (networkResponse.status !== 200 && networkResponse.type !== 'opaque')) {
-              return networkResponse;
-            }
-
-            const responseToCache = networkResponse.clone();
-
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return networkResponse;
-          }
-        );
-      })
-  );
 });
