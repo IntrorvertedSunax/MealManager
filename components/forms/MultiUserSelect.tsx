@@ -1,16 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User } from '../../types';
+import { Member } from '../../types';
 import Avatar from '../ui/Avatar';
 import { UpDownIcon, CheckIcon } from '../ui/Icons';
 
-interface MultiUserSelectProps {
-  users: User[];
-  selectedUserIds: string[];
-  onChange: (userIds: string[]) => void;
+interface MultiMemberSelectProps {
+  members: Member[];
+  selectedMemberIds: string[];
+  onChange: (memberIds: string[]) => void;
   placeholder?: string;
 }
 
-const MultiUserSelect: React.FC<MultiUserSelectProps> = ({ users, selectedUserIds, onChange, placeholder = "Select members" }) => {
+const MultiMemberSelect: React.FC<MultiMemberSelectProps> = ({ members, selectedMemberIds, onChange, placeholder = "Select members" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -26,20 +26,20 @@ const MultiUserSelect: React.FC<MultiUserSelectProps> = ({ users, selectedUserId
     };
   }, [wrapperRef]);
 
-  const handleToggleUser = (userId: string) => {
-    const newSelection = selectedUserIds.includes(userId)
-      ? selectedUserIds.filter(id => id !== userId)
-      : [...selectedUserIds, userId];
+  const handleToggleMember = (memberId: string) => {
+    const newSelection = selectedMemberIds.includes(memberId)
+      ? selectedMemberIds.filter(id => id !== memberId)
+      : [...selectedMemberIds, memberId];
     onChange(newSelection);
   };
 
   const buttonClasses = "w-full flex items-center gap-3 px-3 py-3 text-left bg-white dark:bg-slate-700 dark:border-slate-600 border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition";
   
-  const selectionText = selectedUserIds.length === 0
+  const selectionText = selectedMemberIds.length === 0
     ? placeholder
-    : selectedUserIds.length === 1
-    ? `${users.find(u => u.id === selectedUserIds[0])?.name}`
-    : `${selectedUserIds.length} members selected`;
+    : selectedMemberIds.length === 1
+    ? `${members.find(u => u.id === selectedMemberIds[0])?.name}`
+    : `${selectedMemberIds.length} members selected`;
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -54,20 +54,20 @@ const MultiUserSelect: React.FC<MultiUserSelectProps> = ({ users, selectedUserId
           tabIndex={-1}
           role="listbox"
         >
-          {users.map(user => {
-            const isSelected = selectedUserIds.includes(user.id);
+          {members.map(member => {
+            const isSelected = selectedMemberIds.includes(member.id);
             return (
-                <li key={user.id} role="option" aria-selected={isSelected}>
+                <li key={member.id} role="option" aria-selected={isSelected}>
                 <button
                     type="button"
-                    onClick={() => handleToggleUser(user.id)}
+                    onClick={() => handleToggleMember(member.id)}
                     className="w-full flex items-center gap-3 px-3 py-2 text-left text-slate-900 dark:text-slate-100 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
                 >
                     <div className={`w-5 h-5 flex-shrink-0 border-2 rounded-md flex items-center justify-center ${isSelected ? 'bg-teal-600 border-teal-600' : 'border-slate-300 dark:border-slate-500'}`}>
                         {isSelected && <CheckIcon className="h-4 w-4 text-white" />}
                     </div>
-                    <Avatar name={user.name} avatar={user.avatar} size="md-small" />
-                    <span className="font-medium">{user.name}</span>
+                    <Avatar name={member.name} avatar={member.avatar} size="md-small" />
+                    <span className="font-medium">{member.name}</span>
                 </button>
                 </li>
             );
@@ -78,4 +78,4 @@ const MultiUserSelect: React.FC<MultiUserSelectProps> = ({ users, selectedUserId
   );
 };
 
-export default MultiUserSelect;
+export default MultiMemberSelect;

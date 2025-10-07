@@ -1,20 +1,21 @@
 import React, { useState, useMemo } from 'react';
-import { User, Transaction, MealOption } from '../../types';
+import { Member, Transaction, MealOption } from '../../types';
 import { toast } from '../ui/Toaster';
 import Button from '../ui/Button';
-import { Input, FormField } from './FormControls';
-import UserSelect from './UserSelect';
+import { FormField } from './FormControls';
+import MemberSelect from './UserSelect';
 import DatePicker from '../ui/DatePicker';
 import { getSettings } from '../../data';
+import NumberInput from './NumberInput';
 
 interface MealFormProps {
   data: Transaction | Partial<Transaction> | null;
   onSubmit: (data: Partial<Transaction>) => void;
   isSubmitting: boolean;
-  users: User[];
+  members: Member[];
 }
 
-const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users }) => {
+const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, members }) => {
   const { enabledMeals, defaultMealValues } = getSettings();
 
   // State for form fields that are not part of the meal breakdown
@@ -22,10 +23,10 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
   
   const [formData, setFormData] = useState<Partial<Transaction>>(() => {
     if (data) {
-      return { id: data.id, userId: data.userId };
+      return { id: data.id, memberId: data.memberId };
     }
     // Default for the general "Add Meal" button
-    return { userId: 'all' };
+    return { memberId: 'all' };
   });
 
   // State for the meal breakdown values (e.g., { lunch: "1", dinner: "1" })
@@ -77,8 +78,8 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.userId) {
-        newErrors.userId = 'Please select who had the meal.';
+    if (!formData.memberId) {
+        newErrors.memberId = 'Please select who had the meal.';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -91,12 +92,12 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
     }));
   };
   
-  const handleUserChange = (userId: string) => {
-    setFormData(prev => ({ ...prev, userId }));
-    if (errors.userId) {
+  const handleMemberChange = (memberId: string) => {
+    setFormData(prev => ({ ...prev, memberId }));
+    if (errors.memberId) {
       setErrors(prev => {
         const newErrors = { ...prev };
-        delete newErrors.userId;
+        delete newErrors.memberId;
         return newErrors;
       });
     }
@@ -134,10 +135,10 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
   };
   
   const isEditing = !!data?.id;
-  // "All Users" is only an option for the general "Add Meal" case (when `data` is null).
-  // If `data` is provided, it's a specific action from the calendar for a single user.
-  const isSpecificUserAction = !!data;
-  const userSelectUsers = isSpecificUserAction ? users : [{ id: 'all', name: 'All Users', avatar: null }, ...users];
+  // "All Members" is only an option for the general "Add Meal" case (when `data` is null).
+  // If `data` is provided, it's a specific action from the calendar for a single member.
+  const isSpecificMemberAction = !!data;
+  const memberSelectMembers = isSpecificMemberAction ? members : [{ id: 'all', name: 'All Members', avatar: null }, ...members];
 
   const mealLabels: Record<MealOption, string> = {
     'breakfast': 'Breakfast',
@@ -161,11 +162,11 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
         <DatePicker value={date} onChange={setDate} />
       </FormField>
 
-      <FormField label="User" error={errors.userId}>
-         <UserSelect
-            users={userSelectUsers}
-            selectedUserId={formData.userId || null}
-            onChange={handleUserChange}
+      <FormField label="Member" error={errors.memberId}>
+         <MemberSelect
+            members={memberSelectMembers}
+            selectedMemberId={formData.memberId || null}
+            onChange={handleMemberChange}
             placeholder="Select who had the meal"
         />
       </FormField>
@@ -182,14 +183,12 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
         <div className={`grid ${gridColsClass} gap-x-4 gap-y-6`}>
           {enabledPrimaryMeals.map(meal => (
             <FormField key={meal} label={mealLabels[meal]}>
-              <Input
-                type="number"
-                step="1"
-                min="0"
+              <NumberInput
                 name={meal}
                 value={mealValues[meal] || ''}
-                onChange={(e) => handleMealValueChange(meal as MealOption, e.target.value)}
+                onChange={(value) => handleMealValueChange(meal as MealOption, value)}
                 placeholder="0"
+                min={0}
               />
             </FormField>
           ))}
@@ -198,7 +197,11 @@ const MealForm: React.FC<MealFormProps> = ({ data, onSubmit, isSubmitting, users
 
       {enabledMeals.length > 0 && (
         <FormField label="Total Number of Meals">
-          <Input type="number" readOnly value={mealCount} className="bg-gray-100 text-gray-700 font-medium" />
+          <NumberInput
+            readOnly
+            value={mealCount}
+            className="bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 font-bold"
+          />
         </FormField>
       )}
 

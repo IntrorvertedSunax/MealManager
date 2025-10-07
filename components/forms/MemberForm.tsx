@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { User } from '../../types';
+import { Member } from '../../types';
 import { toast } from '../ui/Toaster';
 import Button from '../ui/Button';
 import { Input, FormField } from './FormControls';
 
 interface MemberFormProps {
-  data: User | null;
-  onSubmit: (data: Partial<User>) => void;
+  data: Member | null;
+  onSubmit: (data: Partial<Member>) => void;
   isSubmitting: boolean;
-  users: User[];
+  members: Member[];
 }
 
-const MemberForm: React.FC<MemberFormProps> = ({ data, onSubmit, isSubmitting, users }) => {
+const MemberForm: React.FC<MemberFormProps> = ({ data, onSubmit, isSubmitting, members }) => {
   const isEditing = !!data;
-  const [formData, setFormData] = useState<Partial<User>>(() => isEditing ? { ...data } : { name: '' });
+  const [formData, setFormData] = useState<Partial<Member>>(() => isEditing ? { ...data } : { name: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateName = (name: string): string | null => {
@@ -23,10 +23,10 @@ const MemberForm: React.FC<MemberFormProps> = ({ data, onSubmit, isSubmitting, u
     }
     const lowercasedName = normalizedName.toLowerCase();
     
-    // Since user.name from the DB is already normalized by the logic in data.ts,
+    // Since member.name from the DB is already normalized by the logic in data.ts,
     // we can perform a direct comparison.
-    const isDuplicate = users.some(
-      (user) => user.name.toLowerCase() === lowercasedName && user.id !== data?.id
+    const isDuplicate = members.some(
+      (member) => member.name.toLowerCase() === lowercasedName && member.id !== data?.id
     );
     if (isDuplicate) {
       return 'Member already exists!';

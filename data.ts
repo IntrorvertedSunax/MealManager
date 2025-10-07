@@ -1,4 +1,4 @@
-import { User, Transaction, DB, AppSettings, MealOption } from './types';
+import { Member, Transaction, DB, AppSettings, MealOption } from './types';
 
 const DB_KEY = 'meal-management-db';
 
@@ -51,14 +51,14 @@ export const getDb = (): DB => {
   }
   
   // No data found, create initial DB with a default member for testing.
-  const defaultUser: User = {
+  const defaultMember: Member = {
     name: 'Default Member',
     id: `default-${Date.now().toString(36)}`,
     avatar: null
   };
   
   const newDb: DB = {
-    users: [defaultUser],
+    members: [defaultMember],
     transactions: [],
   };
 
@@ -70,64 +70,64 @@ export const getDb = (): DB => {
 // --- High-level CRUD functions ---
 
 /**
- * Adds a new user to the database with a capitalized and normalized name.
- * @param userData - The user data to add (without an ID).
- * @returns The newly created user with an ID.
+ * Adds a new member to the database with a capitalized and normalized name.
+ * @param memberData - The member data to add (without an ID).
+ * @returns The newly created member with an ID.
  */
-export const addUser = (userData: Omit<User, 'id'>): User => {
+export const addMember = (memberData: Omit<Member, 'id'>): Member => {
   const db = getDb();
-  const capitalizedName = capitalizeWords(userData.name);
+  const capitalizedName = capitalizeWords(memberData.name);
 
   if (!capitalizedName) {
-    throw new Error('User name cannot be empty.');
+    throw new Error('Member name cannot be empty.');
   }
   
-  if (db.users.some(u => u.name.toLowerCase() === capitalizedName.toLowerCase())) {
+  if (db.members.some(m => m.name.toLowerCase() === capitalizedName.toLowerCase())) {
     throw new Error('Member already exists!');
   }
 
-  const newUser: User = { 
+  const newMember: Member = { 
     name: capitalizedName,
     id: `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 11)}`,
-    avatar: userData.avatar || null
+    avatar: memberData.avatar || null
   };
-  db.users.push(newUser);
+  db.members.push(newMember);
   saveDb(db);
-  return newUser;
+  return newMember;
 };
 
 /**
- * Updates an existing user in the database with a capitalized and normalized name.
- * @param updatedUserData - The user data to update.
- * @returns The updated user.
+ * Updates an existing member in the database with a capitalized and normalized name.
+ * @param updatedMemberData - The member data to update.
+ * @returns The updated member.
  */
-export const updateUser = (updatedUserData: User): User => {
+export const updateMember = (updatedMemberData: Member): Member => {
     const db = getDb();
-    const capitalizedName = capitalizeWords(updatedUserData.name);
+    const capitalizedName = capitalizeWords(updatedMemberData.name);
 
     if (!capitalizedName) {
-      throw new Error('User name cannot be empty.');
+      throw new Error('Member name cannot be empty.');
     }
 
-    if (db.users.some(u => u.name.toLowerCase() === capitalizedName.toLowerCase() && u.id !== updatedUserData.id)) {
+    if (db.members.some(m => m.name.toLowerCase() === capitalizedName.toLowerCase() && m.id !== updatedMemberData.id)) {
         throw new Error('Member already exists!');
     }
     
-    const finalUserData = { ...updatedUserData, name: capitalizedName };
+    const finalMemberData = { ...updatedMemberData, name: capitalizedName };
     
-    db.users = db.users.map(u => u.id === finalUserData.id ? finalUserData : u);
+    db.members = db.members.map(m => m.id === finalMemberData.id ? finalMemberData : m);
     saveDb(db);
-    return finalUserData;
+    return finalMemberData;
 };
 
 /**
- * Deletes a user and all their associated transactions from the database.
- * @param userId - The ID of the user to delete.
+ * Deletes a member and all their associated transactions from the database.
+ * @param memberId - The ID of the member to delete.
  */
-export const deleteUser = (userId: string): void => {
+export const deleteMember = (memberId: string): void => {
   let db = getDb();
-  db.users = db.users.filter(u => u.id !== userId);
-  db.transactions = db.transactions.filter(t => t.userId !== userId);
+  db.members = db.members.filter(m => m.id !== memberId);
+  db.transactions = db.transactions.filter(t => t.memberId !== memberId);
   saveDb(db);
 };
 
@@ -208,7 +208,7 @@ export const saveSettings = (settings: Partial<AppSettings>): void => {
     const currentSettings = getSettings();
     const newSettings = { ...currentSettings, ...settings };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
-  } catch (error) {
+  } catch (error)    {
     console.error("Failed to save settings to localStorage", error);
   }
 };

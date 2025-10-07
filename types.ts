@@ -1,4 +1,4 @@
-export interface User {
+export interface Member {
   id: string;
   name: string;
   avatar: string | null;
@@ -9,7 +9,7 @@ export type TransactionType = 'meal' | 'expense' | 'deposit' | 'shared-expense';
 export interface Transaction {
   id: string;
   type: TransactionType;
-  userId: string; // The user associated with the transaction (who ate, who deposited, who paid)
+  memberId: string; // The member associated with the transaction (who ate, who deposited, who paid)
   date: string;
   amount: number; // Always positive.
   description: string;
@@ -19,18 +19,18 @@ export interface Transaction {
 }
 
 export interface DB {
-  users: User[];
+  members: Member[];
   transactions: Transaction[];
 }
 
 export type Page = 'home' | 'members' | 'expenses' | 'deposits' | 'transactions' | 'calendar' | 'settings';
 
-export type ModalType = TransactionType | 'user';
+export type ModalType = TransactionType | 'member';
 
 export interface ModalConfig {
   isOpen: boolean;
   type: ModalType | null;
-  data: Transaction | User | null;
+  data: Transaction | Member | null;
   deletingId?: string | null;
 }
 

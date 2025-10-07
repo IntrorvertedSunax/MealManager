@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
-import { User, Transaction } from '../../types';
+import { Member, Transaction } from '../../types';
 import { toast } from '../ui/Toaster';
 import Button from '../ui/Button';
 import { Input, FormField, Textarea } from './FormControls';
-import UserSelect from './UserSelect';
+import MemberSelect from './UserSelect';
 import DatePicker from '../ui/DatePicker';
-import MultiUserSelect from './MultiUserSelect';
+import MultiMemberSelect from './MultiUserSelect';
 
 interface SharedExpenseFormProps {
   data: Transaction | null;
   onSubmit: (data: Partial<Transaction>) => void;
   isSubmitting: boolean;
-  users: User[];
+  members: Member[];
 }
 
-const SharedExpenseForm: React.FC<SharedExpenseFormProps> = ({ data, onSubmit, isSubmitting, users }) => {
+const SharedExpenseForm: React.FC<SharedExpenseFormProps> = ({ data, onSubmit, isSubmitting, members }) => {
   const isEditing = !!data;
 
   const [date, setDate] = useState<Date>(() => (data?.date ? new Date(data.date) : new Date()));
@@ -34,15 +34,15 @@ const SharedExpenseForm: React.FC<SharedExpenseFormProps> = ({ data, onSubmit, i
     if (isEditing && data?.sharedWith) {
       return data.sharedWith;
     }
-    // By default, select all users for a new shared expense
-    return users.map(u => u.id);
+    // By default, select all members for a new shared expense
+    return members.map(u => u.id);
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.userId) newErrors.userId = 'Please select who paid.';
+    if (!formData.memberId) newErrors.memberId = 'Please select who paid.';
     if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = 'Amount must be greater than 0.';
     if (!formData.description?.trim()) newErrors.description = 'Description is required.';
     if (sharedWith.length < 1) newErrors.sharedWith = 'At least one member must share the expense.';
@@ -65,19 +65,19 @@ const SharedExpenseForm: React.FC<SharedExpenseFormProps> = ({ data, onSubmit, i
     }
   };
   
-  const handleUserChange = (userId: string) => {
-    setFormData((prev: any) => ({ ...prev, userId }));
-    if (errors.userId) {
+  const handleMemberChange = (memberId: string) => {
+    setFormData((prev: any) => ({ ...prev, memberId }));
+    if (errors.memberId) {
         setErrors(prev => {
             const newErrors = { ...prev };
-            delete newErrors.userId;
+            delete newErrors.memberId;
             return newErrors;
         });
     }
   };
 
-  const handleSharedWithChange = (userIds: string[]) => {
-    setSharedWith(userIds);
+  const handleSharedWithChange = (memberIds: string[]) => {
+    setSharedWith(memberIds);
     if (errors.sharedWith) {
         setErrors(prev => {
             const newErrors = { ...prev };
@@ -114,11 +114,11 @@ const SharedExpenseForm: React.FC<SharedExpenseFormProps> = ({ data, onSubmit, i
         <DatePicker value={date} onChange={setDate} />
       </FormField>
 
-      <FormField label="Paid by" error={errors.userId}>
-         <UserSelect
-            users={users}
-            selectedUserId={formData.userId || null}
-            onChange={handleUserChange}
+      <FormField label="Paid by" error={errors.memberId}>
+         <MemberSelect
+            members={members}
+            selectedMemberId={formData.memberId || null}
+            onChange={handleMemberChange}
             placeholder="Select a member"
         />
       </FormField>
@@ -143,9 +143,9 @@ const SharedExpenseForm: React.FC<SharedExpenseFormProps> = ({ data, onSubmit, i
       </FormField>
 
       <FormField label="Shared with" description={`Each member will be charged ৳${(parseFloat(formData.amount || '0') / (sharedWith.length || 1)).toFixed(2)}`} error={errors.sharedWith}>
-        <MultiUserSelect 
-            users={users}
-            selectedUserIds={sharedWith}
+        <MultiMemberSelect 
+            members={members}
+            selectedMemberIds={sharedWith}
             onChange={handleSharedWithChange}
         />
       </FormField>

@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { User, Transaction } from '../../types';
+import { Member, Transaction } from '../../types';
 import { toast } from '../ui/Toaster';
 import Button from '../ui/Button';
 import { Input, FormField } from './FormControls';
-import UserSelect from './UserSelect';
+import MemberSelect from './UserSelect';
 import DatePicker from '../ui/DatePicker';
 
 interface DepositFormProps {
   data: Transaction | null;
   onSubmit: (data: Partial<Transaction>) => void;
   isSubmitting: boolean;
-  users: User[];
+  members: Member[];
 }
 
-const DepositForm: React.FC<DepositFormProps> = ({ data, onSubmit, isSubmitting, users }) => {
+const DepositForm: React.FC<DepositFormProps> = ({ data, onSubmit, isSubmitting, members }) => {
   const isEditing = !!data;
 
   const [date, setDate] = useState<Date>(() => (data?.date ? new Date(data.date) : new Date()));
@@ -33,7 +33,7 @@ const DepositForm: React.FC<DepositFormProps> = ({ data, onSubmit, isSubmitting,
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.userId) newErrors.userId = 'Please select a member.';
+    if (!formData.memberId) newErrors.memberId = 'Please select a member.';
     if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = 'Amount must be greater than 0.';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -54,12 +54,12 @@ const DepositForm: React.FC<DepositFormProps> = ({ data, onSubmit, isSubmitting,
     }
   };
   
-  const handleUserChange = (userId: string) => {
-    setFormData((prev: any) => ({ ...prev, userId }));
-    if (errors.userId) {
+  const handleMemberChange = (memberId: string) => {
+    setFormData((prev: any) => ({ ...prev, memberId }));
+    if (errors.memberId) {
         setErrors(prev => {
             const newErrors = { ...prev };
-            delete newErrors.userId;
+            delete newErrors.memberId;
             return newErrors;
         });
     }
@@ -84,17 +84,17 @@ const DepositForm: React.FC<DepositFormProps> = ({ data, onSubmit, isSubmitting,
 
   return (
     <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
-      <FormField label="Deposited by" error={errors.userId}>
-        <UserSelect
-            users={users}
-            selectedUserId={formData.userId || null}
-            onChange={handleUserChange}
-            placeholder="Select a member"
-        />
-      </FormField>
-
       <FormField label="Date">
         <DatePicker value={date} onChange={setDate} />
+      </FormField>
+
+      <FormField label="Deposited by" error={errors.memberId}>
+        <MemberSelect
+            members={members}
+            selectedMemberId={formData.memberId || null}
+            onChange={handleMemberChange}
+            placeholder="Select a member"
+        />
       </FormField>
 
       <FormField label="Amount" error={errors.amount}>

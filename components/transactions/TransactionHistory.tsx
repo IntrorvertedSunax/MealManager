@@ -1,19 +1,19 @@
 import React from 'react';
-import { Transaction, User } from '../../types';
+import { Transaction, Member } from '../../types';
 import { PencilIcon, TrashIcon } from '../ui/Icons';
 import Badge from '../ui/Badge';
 
 interface TransactionListItemProps {
   transaction: Transaction;
-  users: User[];
+  members: Member[];
   onEdit: () => void;
   onDelete: () => void;
   runningBalance?: number;
   hideRunningBalance?: boolean;
 }
 
-const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, users, onEdit, onDelete, runningBalance, hideRunningBalance }) => {
-  const user = users.find(u => u.id === transaction.userId);
+const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, members, onEdit, onDelete, runningBalance, hideRunningBalance }) => {
+  const member = members.find(u => u.id === transaction.memberId);
 
   if (transaction.type === 'meal') {
     return null;
@@ -32,14 +32,14 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
   if (transaction.type === 'expense' || transaction.type === 'shared-expense') {
     title = transaction.description;
   } else { // deposit
-    title = user?.name || 'Unknown';
+    title = member?.name || 'Unknown';
   }
 
   // Compact layout for Deposits & Expenses pages
   if (hideRunningBalance) {
     const sharedWithNames = transaction.type === 'shared-expense'
       ? transaction.sharedWith
-          ?.map(id => users.find(u => u.id === id)?.name.split(' ')[0])
+          ?.map(id => members.find(u => u.id === id)?.name.split(' ')[0])
           .filter(Boolean)
           .join(', ')
       : null;
@@ -63,9 +63,9 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
             <p className={`font-extrabold text-lg ${amountColor}`}>
               {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(2)}
             </p>
-            {isExpenseType && user && (
+            {isExpenseType && member && (
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Paid by {user.name}
+                Paid by {member.name}
               </p>
             )}
           </div>
@@ -86,7 +86,7 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
   let subtext: React.ReactNode = null;
   if (transaction.type === 'shared-expense') {
       const sharedWithNames = transaction.sharedWith
-          ?.map(id => users.find(u => u.id === id)?.name.split(' ')[0])
+          ?.map(id => members.find(u => u.id === id)?.name.split(' ')[0])
           .filter(Boolean)
           .join(', ');
       subtext = (
@@ -116,9 +116,9 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
           <p className={`font-extrabold text-xl ${amountColor}`}>
             {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(2)}
           </p>
-          {isExpenseType && user && (
+          {isExpenseType && member && (
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              Paid by {user.name}
+              Paid by {member.name}
             </p>
           )}
         </div>

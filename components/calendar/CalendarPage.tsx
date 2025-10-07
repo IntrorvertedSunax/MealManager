@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { User, Transaction, ModalType } from '../../types';
+import { Member, Transaction, ModalType } from '../../types';
 import { CalculationMetrics } from '../../logic';
 
 interface CalendarPageProps {
-  users: User[];
+  members: Member[];
   transactions: Transaction[];
   firstMealDate: Date | null;
   lastMealDate: Date | null;
@@ -11,10 +11,10 @@ interface CalendarPageProps {
   openSheet: (type: ModalType, data: Transaction | Partial<Transaction>) => void;
 }
 
-const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstMealDate, lastMealDate, calculations, openSheet }) => {
-  const sortedUsers = useMemo(() => [...users].sort((a, b) => a.name.localeCompare(b.name)), [users]);
+const CalendarPage: React.FC<CalendarPageProps> = ({ members, transactions, firstMealDate, lastMealDate, calculations, openSheet }) => {
+  const sortedMembers = useMemo(() => [...members].sort((a, b) => a.name.localeCompare(b.name)), [members]);
 
-  // Create a map for efficient lookup of meals by date and user ID.
+  // Create a map for efficient lookup of meals by date and member ID.
   const mealMap = useMemo(() => {
     const map = new Map<string, Transaction>();
     transactions.filter(t => t.type === 'meal').forEach(t => {
@@ -24,7 +24,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
-      const key = `${dateStr}-${t.userId}`;
+      const key = `${dateStr}-${t.memberId}`;
       map.set(key, t);
     });
     return map;
@@ -53,7 +53,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg h-full flex flex-col p-4">
-      {users.length > 0 ? (
+      {members.length > 0 ? (
         dayRange.length > 0 ? (
             <div className="overflow-auto relative border border-slate-200/80 dark:border-slate-700 rounded-xl flex-1">
                 <table className="min-w-full text-base divide-y divide-slate-200/80 dark:divide-slate-700">
@@ -65,9 +65,9 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
                             <th scope="col" className="sticky top-0 left-16 md:left-20 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-left font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider z-30 border-r border-b border-slate-200/80 dark:border-slate-700">
                                 Date
                             </th>
-                            {sortedUsers.map(user => (
-                            <th key={user.id} scope="col" className="sticky top-0 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-center font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap z-20 border-b border-slate-200/80 dark:border-slate-700">
-                                {user.name.split(' ')[0]}
+                            {sortedMembers.map(member => (
+                            <th key={member.id} scope="col" className="sticky top-0 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-center font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap z-20 border-b border-slate-200/80 dark:border-slate-700">
+                                {member.name.split(' ')[0]}
                             </th>
                             ))}
                         </tr>
@@ -89,8 +89,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
                                 <td className="sticky left-16 md:left-20 bg-white dark:bg-slate-800 group-hover:bg-slate-50/70 dark:group-hover:bg-slate-700/50 px-4 py-3 whitespace-nowrap font-medium text-slate-800 dark:text-slate-100 border-r border-slate-200/80 dark:border-slate-700 z-10">
                                     {item.date.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' })}
                                 </td>
-                                {sortedUsers.map(user => {
-                                  const key = `${dateStr}-${user.id}`;
+                                {sortedMembers.map(member => {
+                                  const key = `${dateStr}-${member.id}`;
                                   const transaction = mealMap.get(key);
                                   
                                   const mealCount = transaction 
@@ -111,14 +111,14 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
                                   
                                   const handleCellClick = () => {
                                       const dataForSheet = transaction || {
-                                        userId: user.id,
+                                        memberId: member.id,
                                         date: item.date.toISOString(),
                                       };
                                       openSheet('meal', dataForSheet);
                                   };
 
                                   return (
-                                      <td key={user.id} className="px-4 py-3 whitespace-nowrap text-center cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-700 transition-colors duration-150" onClick={handleCellClick}>
+                                      <td key={member.id} className="px-4 py-3 whitespace-nowrap text-center cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-700 transition-colors duration-150" onClick={handleCellClick}>
                                           <span className={className}>
                                               {mealCount}
                                           </span>
@@ -134,11 +134,11 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ users, transactions, firstM
                         <th scope="row" colSpan={2} className="sticky bottom-0 left-0 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-left font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider z-30 border-r border-t border-slate-200/80 dark:border-slate-700">
                             Total Meals
                         </th>
-                        {sortedUsers.map(user => {
-                          const userData = calculations.userData.find(ud => ud.user.id === user.id);
-                          const mealCount = userData?.userMealCount ?? 0;
+                        {sortedMembers.map(member => {
+                          const memberData = calculations.memberData.find(md => md.member.id === member.id);
+                          const mealCount = memberData?.memberMealCount ?? 0;
                           return (
-                            <td key={user.id} className="sticky bottom-0 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-center font-bold text-slate-800 dark:text-slate-100 z-20 border-t border-slate-200/80 dark:border-slate-700">
+                            <td key={member.id} className="sticky bottom-0 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-center font-bold text-slate-800 dark:text-slate-100 z-20 border-t border-slate-200/80 dark:border-slate-700">
                               {mealCount}
                             </td>
                           );

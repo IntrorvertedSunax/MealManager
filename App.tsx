@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { User, Transaction, TransactionType, Page, ModalConfig, AlertDialogConfig, ModalType } from './types';
+import { Member, Transaction, TransactionType, Page, ModalConfig, AlertDialogConfig, ModalType } from './types';
 import Header from './components/ui/Header';
 import FlatmateBalanceCard from './components/dashboard/FlatmateBalanceCard';
 import MemberCard from './components/members/MemberCard';
@@ -27,8 +27,8 @@ import ResetConfirmationDialog from './components/settings/ResetConfirmationDial
 const HomePage = ({ firstMealDate, calculations, handleNavigate, openSheet }: { 
   firstMealDate: Date | null;
   calculations: CalculationMetrics;
-  handleNavigate: (page: Page, userId?: string | null) => void;
-  openSheet: (type: ModalType, data?: Transaction | User | Partial<Transaction> | null) => void;
+  handleNavigate: (page: Page, memberId?: string | null) => void;
+  openSheet: (type: ModalType, data?: Transaction | Member | Partial<Transaction> | null) => void;
 }) => {
   const dayCount = useMemo(() => {
     if (!firstMealDate) return 0;
@@ -98,7 +98,7 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate, openSheet }: {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Member Balances</h2>
           <Button 
-            onClick={() => openSheet('user')}
+            onClick={() => openSheet('member')}
             className="py-1.5 px-3"
           >
             <UserPlusIcon className="h-4 w-4 mr-1.5" />
@@ -106,8 +106,8 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate, openSheet }: {
           </Button>
         </div>
         <div className="space-y-4">
-          {calculations.userData.map(data => (
-            <FlatmateBalanceCard key={data.user.id} user={data.user} balance={data.balance} onHistoryClick={() => handleNavigate('transactions', data.user.id)} />
+          {calculations.memberData.map(data => (
+            <FlatmateBalanceCard key={data.member.id} member={data.member} balance={data.balance} onHistoryClick={() => handleNavigate('transactions', data.member.id)} />
           ))}
         </div>
       </div>
@@ -115,31 +115,31 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate, openSheet }: {
   );
 };
   
-const MembersPage = ({ users, openSheet, confirmRemoveUser }: {
-  users: User[];
-  openSheet: (type: 'user', data?: User | null) => void;
-  confirmRemoveUser: (user: User) => void;
+const MembersPage = ({ members, openSheet, confirmRemoveMember }: {
+  members: Member[];
+  openSheet: (type: 'member', data?: Member | null) => void;
+  confirmRemoveMember: (member: Member) => void;
 }) => {
   return (
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg space-y-4">
           <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-slate-700 dark:text-slate-200">All Members</h2>
-              <Button onClick={() => openSheet('user')} className="rounded-lg">
+              <Button onClick={() => openSheet('member')} className="rounded-lg">
                   <PlusIcon className="h-5 w-5 mr-1" />
                   Add Member
               </Button>
           </div>
 
           <div className="space-y-3">
-              {users.length === 0 ? (
+              {members.length === 0 ? (
                   <p className="text-slate-500 dark:text-slate-400 text-center py-4">No members yet. Add one to get started!</p>
               ) : (
-                  users.map(user =>
+                  members.map(member =>
                       <MemberCard
-                          key={user.id}
-                          user={user}
-                          onEdit={() => openSheet('user', user)}
-                          onRemove={() => confirmRemoveUser(user)}
+                          key={member.id}
+                          member={member}
+                          onEdit={() => openSheet('member', member)}
+                          onRemove={() => confirmRemoveMember(member)}
                       />
                   )
               )}
@@ -151,12 +151,12 @@ const MembersPage = ({ users, openSheet, confirmRemoveUser }: {
 // FIX: Defined a type alias for `SharedExpenseShareItem` props to resolve a TypeScript error related to inline type definitions for component props.
 type SharedExpenseShareItemProps = {
   transaction: Transaction;
-  users: User[];
+  members: Member[];
   yourShare: number;
 };
 // FIX: Changed to React.FC to correctly type the component and allow for React-specific props like 'key'.
-const SharedExpenseShareItem: React.FC<SharedExpenseShareItemProps> = ({ transaction, users, yourShare }) => {
-  const payer = users.find(u => u.id === transaction.userId);
+const SharedExpenseShareItem: React.FC<SharedExpenseShareItemProps> = ({ transaction, members, yourShare }) => {
+  const payer = members.find(u => u.id === transaction.memberId);
   const formattedDate = new Date(transaction.date).toLocaleString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric'
   });
@@ -183,11 +183,11 @@ const SharedExpenseShareItem: React.FC<SharedExpenseShareItemProps> = ({ transac
 };
 
 const TransactionsPage = ({
-  filterUserId, users, calculations, sortedTransactions, searchQuery,
+  filterMemberId, members, calculations, sortedTransactions, searchQuery,
   setSearchQuery, openSheet, confirmRemoveTransaction, runningBalanceMap
 }: {
-  filterUserId: string | null;
-  users: User[];
+  filterMemberId: string | null;
+  members: Member[];
   calculations: CalculationMetrics;
   sortedTransactions: Transaction[];
   searchQuery: string;
@@ -196,8 +196,8 @@ const TransactionsPage = ({
   confirmRemoveTransaction: (t: Transaction) => void;
   runningBalanceMap: Map<string, number>;
 }) => {
-  const filteredUser = filterUserId ? users.find(u => u.id === filterUserId) : null;
-  const userBalanceData = filteredUser ? calculations.userData.find(d => d.user.id === filteredUser.id) : null;
+  const filteredMember = filterMemberId ? members.find(u => u.id === filterMemberId) : null;
+  const memberBalanceData = filteredMember ? calculations.memberData.find(d => d.member.id === filteredMember.id) : null;
 
   // FIX: Explicitly typed the useMemo hook's return value to be an array of a union of types.
   // This prevents TypeScript from inferring a union of array types (e.g., TypeA[] | TypeB[]),
@@ -207,23 +207,23 @@ const TransactionsPage = ({
     { itemType: 'deposit'; transaction: Transaction; date: Date } |
     { itemType: 'share'; transaction: Transaction; date: Date }
   )[]>(() => {
-    if (filteredUser) {
-      const userDeposits = sortedTransactions.filter(t => t.userId === filteredUser.id && t.type === 'deposit');
-      const userSharedExpenses = sortedTransactions.filter(t => t.type === 'shared-expense' && t.sharedWith?.includes(filteredUser.id));
+    if (filteredMember) {
+      const memberDeposits = sortedTransactions.filter(t => t.memberId === filteredMember.id && t.type === 'deposit');
+      const memberSharedExpenses = sortedTransactions.filter(t => t.type === 'shared-expense' && t.sharedWith?.includes(filteredMember.id));
 
       const allHistoryItems: (
         { itemType: 'deposit'; transaction: Transaction; date: Date } | 
         { itemType: 'share'; transaction: Transaction; date: Date }
       )[] = [
-        ...userDeposits.map(t => ({ itemType: 'deposit' as const, transaction: t, date: new Date(t.date) })),
-        ...userSharedExpenses.map(t => ({ itemType: 'share' as const, transaction: t, date: new Date(t.date) }))
+        ...memberDeposits.map(t => ({ itemType: 'deposit' as const, transaction: t, date: new Date(t.date) })),
+        ...memberSharedExpenses.map(t => ({ itemType: 'share' as const, transaction: t, date: new Date(t.date) }))
       ];
       
       return allHistoryItems.sort((a, b) => b.date.getTime() - a.date.getTime());
     }
     // For the main history, show all deposits, expenses, and shared expenses.
     return sortedTransactions.filter(t => t.type !== 'meal');
-  }, [filteredUser, sortedTransactions]);
+  }, [filteredMember, sortedTransactions]);
 
   const searchedItems = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -233,43 +233,43 @@ const TransactionsPage = ({
 
     return historyItemsToDisplay.filter(itemOrTx => {
       const t = 'itemType' in itemOrTx ? itemOrTx.transaction : itemOrTx;
-      const user = users.find(u => u.id === t.userId);
-      const userName = user ? user.name.toLowerCase() : '';
+      const member = members.find(u => u.id === t.memberId);
+      const memberName = member ? member.name.toLowerCase() : '';
       const description = t.description ? t.description.toLowerCase() : '';
       
-      return userName.includes(lowercasedQuery) || description.includes(lowercasedQuery);
+      return memberName.includes(lowercasedQuery) || description.includes(lowercasedQuery);
     });
-  }, [searchQuery, historyItemsToDisplay, users]);
+  }, [searchQuery, historyItemsToDisplay, members]);
 
   return (
     <div className="space-y-4">
-      {userBalanceData && (
+      {memberBalanceData && (
         <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm">
           <div className="flex justify-between items-center mb-3">
               <h3 className="font-semibold text-slate-600 dark:text-slate-300">Current Balance</h3>
-              <p className={`font-extrabold text-2xl ${userBalanceData.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-                  {userBalanceData.balance < 0 && '-'}<span className="font-black">৳</span>{Math.abs(userBalanceData.balance).toFixed(0)}
+              <p className={`font-extrabold text-2xl ${memberBalanceData.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                  {memberBalanceData.balance < 0 && '-'}<span className="font-black">৳</span>{Math.abs(memberBalanceData.balance).toFixed(0)}
               </p>
           </div>
           <hr className="my-3 border-slate-100 dark:border-slate-700" />
           <div className="grid grid-cols-3 text-center gap-2">
               <div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm">Total Meals</p>
-                  <p className="font-extrabold text-slate-800 dark:text-slate-100 text-lg">{userBalanceData.userMealCount}</p>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-100 text-lg">{memberBalanceData.memberMealCount}</p>
               </div>
               <div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm">Total Deposit</p>
-                  <p className="font-extrabold text-slate-800 dark:text-slate-100 text-lg"><span className="font-black">৳</span>{userBalanceData.userDeposits.toFixed(0)}</p>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-100 text-lg"><span className="font-black">৳</span>{memberBalanceData.memberDeposits.toFixed(0)}</p>
               </div>
               <div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm">Total Cost</p>
-                  <p className="font-extrabold text-slate-800 dark:text-slate-100 text-lg"><span className="font-black">৳</span>{(userBalanceData.userMealCost + userBalanceData.userSharedExpenseCost).toFixed(0)}</p>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-100 text-lg"><span className="font-black">৳</span>{(memberBalanceData.memberMealCost + memberBalanceData.memberSharedExpenseCost).toFixed(0)}</p>
               </div>
           </div>
         </div>
       )}
 
-      {!filterUserId && (
+      {!filterMemberId && (
         <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
           <div className="relative">
             <Input
@@ -291,15 +291,15 @@ const TransactionsPage = ({
           <div className="text-center text-slate-500 dark:text-slate-400 py-8 bg-white dark:bg-slate-800 rounded-xl shadow-sm">No results for "{searchQuery}"</div>
         ) : (
           searchedItems.map((itemOrTx, index) => {
-            if ('itemType' in itemOrTx) { // User-specific history view
+            if ('itemType' in itemOrTx) { // Member-specific history view
               if (itemOrTx.itemType === 'deposit') {
-                return <TransactionListItem key={itemOrTx.transaction.id} transaction={itemOrTx.transaction} users={users} onEdit={() => openSheet('deposit', itemOrTx.transaction)} onDelete={() => confirmRemoveTransaction(itemOrTx.transaction)} hideRunningBalance={true} />;
+                return <TransactionListItem key={itemOrTx.transaction.id} transaction={itemOrTx.transaction} members={members} onEdit={() => openSheet('deposit', itemOrTx.transaction)} onDelete={() => confirmRemoveTransaction(itemOrTx.transaction)} hideRunningBalance={true} />;
               } else { // 'share'
                 const share = itemOrTx.transaction.amount / (itemOrTx.transaction.sharedWith?.length || 1);
-                return <SharedExpenseShareItem key={`share-${itemOrTx.transaction.id}`} transaction={itemOrTx.transaction} users={users} yourShare={share} />;
+                return <SharedExpenseShareItem key={`share-${itemOrTx.transaction.id}`} transaction={itemOrTx.transaction} members={members} yourShare={share} />;
               }
             } else { // General history view
-                return <TransactionListItem key={itemOrTx.id} transaction={itemOrTx} users={users} onEdit={() => openSheet(itemOrTx.type, itemOrTx)} onDelete={() => confirmRemoveTransaction(itemOrTx)} runningBalance={runningBalanceMap.get(itemOrTx.id)} />;
+                return <TransactionListItem key={itemOrTx.id} transaction={itemOrTx} members={members} onEdit={() => openSheet(itemOrTx.type, itemOrTx)} onDelete={() => confirmRemoveTransaction(itemOrTx)} runningBalance={runningBalanceMap.get(itemOrTx.id)} />;
             }
           })
         )}
@@ -308,8 +308,8 @@ const TransactionsPage = ({
   );
 };
 
-const DepositsPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction, runningBalanceMap }: {
-  users: User[];
+const DepositsPage = ({ members, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction, runningBalanceMap }: {
+  members: Member[];
   sortedTransactions: Transaction[];
   searchQuery: string;
   setSearchQuery: (q: string) => void;
@@ -328,12 +328,12 @@ const DepositsPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
     const lowercasedQuery = searchQuery.toLowerCase();
 
     return depositTransactions.filter(t => {
-      const user = users.find(u => u.id === t.userId);
-      const userName = user ? user.name.toLowerCase() : '';
+      const member = members.find(u => u.id === t.memberId);
+      const memberName = member ? member.name.toLowerCase() : '';
       
-      return userName.includes(lowercasedQuery);
+      return memberName.includes(lowercasedQuery);
     });
-  }, [searchQuery, depositTransactions, users]);
+  }, [searchQuery, depositTransactions, members]);
 
   return (
     <div className="space-y-4">
@@ -360,7 +360,7 @@ const DepositsPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
             <TransactionListItem
               key={transaction.id}
               transaction={transaction}
-              users={users}
+              members={members}
               onEdit={() => openSheet(transaction.type, transaction)}
               onDelete={() => confirmRemoveTransaction(transaction)}
               hideRunningBalance={true}
@@ -372,8 +372,8 @@ const DepositsPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
   );
 };
 
-const ExpensesPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction, runningBalanceMap }: {
-  users: User[];
+const ExpensesPage = ({ members, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction, runningBalanceMap }: {
+  members: Member[];
   sortedTransactions: Transaction[];
   searchQuery: string;
   setSearchQuery: (q: string) => void;
@@ -392,13 +392,13 @@ const ExpensesPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
     const lowercasedQuery = searchQuery.toLowerCase();
 
     return expenseTransactions.filter(t => {
-      const user = users.find(u => u.id === t.userId);
-      const userName = user ? user.name.toLowerCase() : '';
+      const member = members.find(u => u.id === t.memberId);
+      const memberName = member ? member.name.toLowerCase() : '';
       const description = t.description ? t.description.toLowerCase() : '';
       
-      return userName.includes(lowercasedQuery) || description.includes(lowercasedQuery);
+      return memberName.includes(lowercasedQuery) || description.includes(lowercasedQuery);
     });
-  }, [searchQuery, expenseTransactions, users]);
+  }, [searchQuery, expenseTransactions, members]);
 
   return (
     <div className="space-y-4">
@@ -425,7 +425,7 @@ const ExpensesPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
             <TransactionListItem
               key={transaction.id}
               transaction={transaction}
-              users={users}
+              members={members}
               onEdit={() => openSheet(transaction.type, transaction)}
               onDelete={() => confirmRemoveTransaction(transaction)}
               hideRunningBalance={true}
@@ -441,7 +441,7 @@ const ExpensesPage = ({ users, sortedTransactions, searchQuery, setSearchQuery, 
 // --- Main App Component ---
 
 const App: React.FC = () => {
-  const [users, setUsers] = useState<User[]>(() => db.getDb().users);
+  const [members, setMembers] = useState<Member[]>(() => db.getDb().members);
   const [transactions, setTransactions] = useState<Transaction[]>(() => db.getDb().transactions);
   const [page, setPage] = useState<Page>('home');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -449,14 +449,14 @@ const App: React.FC = () => {
   const [sheetConfig, setSheetConfig] = useState<ModalConfig>({ isOpen: false, type: null, data: null });
   const [alertDialog, setAlertDialog] = useState<AlertDialogConfig>({ isOpen: false, title: '', description: '', onConfirm: () => {} });
   const [isResetConfirmationOpen, setIsResetConfirmationOpen] = useState(false);
-  const [filterUserId, setFilterUserId] = useState<string | null>(null);
+  const [filterMemberId, setFilterMemberId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     setSearchQuery('');
-  }, [page, filterUserId]);
+  }, [page, filterMemberId]);
   
   useEffect(() => {
     if (!sheetConfig.isOpen) {
@@ -465,7 +465,7 @@ const App: React.FC = () => {
     }
   }, [sheetConfig.isOpen]);
 
-  const calculations = useMemo(() => calculateMetrics(users, transactions), [users, transactions]);
+  const calculations = useMemo(() => calculateMetrics(members, transactions), [members, transactions]);
 
   const sortedTransactions = useMemo(() => 
     [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
@@ -505,37 +505,37 @@ const App: React.FC = () => {
     return date;
   }, [transactions]);
 
-  const handleNavigate = (newPage: Page, userId: string | null = null) => {
+  const handleNavigate = (newPage: Page, memberId: string | null = null) => {
     setPage(newPage);
-    setFilterUserId(userId);
+    setFilterMemberId(memberId);
     setIsMenuOpen(false);
   };
   
-  const openSheet = (type: ModalType, data: Transaction | User | Partial<Transaction> | null = null) => {
-    setSheetConfig({ isOpen: true, type, data: data as Transaction | User | null });
+  const openSheet = (type: ModalType, data: Transaction | Member | Partial<Transaction> | null = null) => {
+    setSheetConfig({ isOpen: true, type, data: data as Transaction | Member | null });
   };
   
   const closeSheet = () => setSheetConfig({ isOpen: false, type: null, data: null });
 
   const closeAlertDialog = () => setAlertDialog({ ...alertDialog, isOpen: false });
   
-  const handleEntrySubmit = (entry: Partial<User & Transaction>, type: ModalType) => {
+  const handleEntrySubmit = (entry: Partial<Member & Transaction>, type: ModalType) => {
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
 
     const isEditing = !!entry.id;
     try {
-        if (type === 'user') {
-            const userEntry = entry as Partial<User>;
-            if (!userEntry.name?.trim()) throw new Error('User name cannot be empty.');
+        if (type === 'member') {
+            const memberEntry = entry as Partial<Member>;
+            if (!memberEntry.name?.trim()) throw new Error('Member name cannot be empty.');
 
             if (isEditing) {
-                const updatedUser = db.updateUser({ ...users.find(u => u.id === userEntry.id), ...userEntry } as User);
-                setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+                const updatedMember = db.updateMember({ ...members.find(u => u.id === memberEntry.id), ...memberEntry } as Member);
+                setMembers(members.map(u => u.id === updatedMember.id ? updatedMember : u));
             } else {
-                const newUser = db.addUser(entry as Omit<User, 'id'>);
-                setUsers(prev => [...prev, newUser]);
+                const newMember = db.addMember(entry as Omit<Member, 'id'>);
+                setMembers(prev => [...prev, newMember]);
             }
         } else { // Transaction types
             const txEntry = entry as Partial<Transaction>;
@@ -562,23 +562,23 @@ const App: React.FC = () => {
                 dateForTransaction = selectedDate.toISOString();
             }
 
-            if (!txEntry.userId) throw new Error('A user must be selected.');
+            if (!txEntry.memberId) throw new Error('A member must be selected.');
             if (type !== 'meal' && (!txEntry.amount || txEntry.amount <= 0)) throw new Error('Amount must be greater than 0.');
             if (type === 'shared-expense' && (!txEntry.sharedWith || txEntry.sharedWith.length === 0)) throw new Error('At least one member must share the expense.');
 
 
-            if (type === 'meal' && txEntry.userId === 'all') {
-                if (isEditing) throw new Error("Cannot edit a meal entry for 'All' users.");
-                if (!users.length) throw new Error("There are no users to add meals for.");
+            if (type === 'meal' && txEntry.memberId === 'all') {
+                if (isEditing) throw new Error("Cannot edit a meal entry for 'All' members.");
+                if (!members.length) throw new Error("There are no members to add meals for.");
 
                 const dateToMatch = new Date(dateForTransaction).toISOString().split('T')[0];
     
                 let nextTransactions = [...transactions];
             
-                users.forEach(user => {
+                members.forEach(member => {
                     const existingMeal = nextTransactions.find(t => 
                         t.type === 'meal' &&
-                        t.userId === user.id &&
+                        t.memberId === member.id &&
                         new Date(t.date).toISOString().split('T')[0] === dateToMatch
                     );
             
@@ -592,7 +592,7 @@ const App: React.FC = () => {
                     } else {
                         const newMeal = db.addTransaction({
                             type: 'meal',
-                            userId: user.id,
+                            memberId: member.id,
                             date: dateForTransaction,
                             amount: 0,
                             description: txEntry.description,
@@ -619,7 +619,7 @@ const App: React.FC = () => {
                         const dateToMatch = new Date(dateForTransaction).toISOString().split('T')[0];
                         const existingMeal = transactions.find(t => 
                             t.type === 'meal' &&
-                            t.userId === txEntry.userId &&
+                            t.memberId === txEntry.memberId &&
                             new Date(t.date).toISOString().split('T')[0] === dateToMatch
                         );
 
@@ -633,7 +633,7 @@ const App: React.FC = () => {
                         } else {
                             const newTransactionData: Omit<Transaction, 'id'> = {
                                 type: 'meal',
-                                userId: txEntry.userId as string,
+                                memberId: txEntry.memberId as string,
                                 date: dateForTransaction,
                                 amount: 0,
                                 description: txEntry.description?.trim() || '',
@@ -645,7 +645,7 @@ const App: React.FC = () => {
                     } else { // deposit, expense, shared-expense
                         const newTransactionData: Omit<Transaction, 'id'> = {
                             type: type as TransactionType,
-                            userId: txEntry.userId as string,
+                            memberId: txEntry.memberId as string,
                             date: dateForTransaction,
                             amount: txEntry.amount || 0,
                             description: txEntry.description?.trim() || '',
@@ -672,7 +672,7 @@ const App: React.FC = () => {
             case 'shared-expense':
               handleNavigate('transactions');
               break;
-            case 'user':
+            case 'member':
               handleNavigate('members');
               break;
           }
@@ -685,19 +685,19 @@ const App: React.FC = () => {
     }
   };
 
-  const confirmRemoveUser = (user: User) => {
+  const confirmRemoveMember = (member: Member) => {
     setAlertDialog({
       isOpen: true,
-      title: `Remove ${user.name}?`,
-      description: `This will permanently remove ${user.name} and all their associated data. This action cannot be undone.`,
+      title: `Remove ${member.name}?`,
+      description: `This will permanently remove ${member.name} and all their associated data. This action cannot be undone.`,
       onConfirm: () => {
-        db.deleteUser(user.id);
-        setUsers(users.filter(u => u.id !== user.id));
-        setTransactions(transactions.filter(t => t.userId !== user.id));
-        if (filterUserId === user.id) {
+        db.deleteMember(member.id);
+        setMembers(members.filter(u => u.id !== member.id));
+        setTransactions(transactions.filter(t => t.memberId !== member.id));
+        if (filterMemberId === member.id) {
           handleNavigate('members');
         }
-        toast.success('User Removed', `${user.name} has been removed.`);
+        toast.success('Member Removed', `${member.name} has been removed.`);
         closeAlertDialog();
       }
     });
@@ -721,7 +721,7 @@ const App: React.FC = () => {
   const handleSelectAddType = (type: ModalType) => {
     setIsAddMenuOpen(false);
     setTimeout(() => {
-      if (type !== 'user' && users.length === 0) {
+      if (type !== 'member' && members.length === 0) {
         toast.error('No Members Found', 'Please add a member before logging a transaction.');
         return;
       }
@@ -737,7 +737,7 @@ const App: React.FC = () => {
     db.resetAllData();
     const newDb = db.getDb(); // This creates and returns the default DB
     
-    setUsers(newDb.users);
+    setMembers(newDb.members);
     setTransactions(newDb.transactions);
 
     toast.success('Data Reset', 'Application has been reset to its default state.');
@@ -745,16 +745,16 @@ const App: React.FC = () => {
     handleNavigate('home'); // Navigate to home page to show the fresh state
   };
   
-  const filteredUserForTitle = useMemo(() => filterUserId ? users.find(u => u.id === filterUserId) : null, [filterUserId, users]);
-  const transactionPageTitle = filteredUserForTitle ? `${filteredUserForTitle.name}'s History` : 'Transaction History';
+  const filteredMemberForTitle = useMemo(() => filterMemberId ? members.find(u => u.id === filterMemberId) : null, [filterMemberId, members]);
+  const transactionPageTitle = filteredMemberForTitle ? `${filteredMemberForTitle.name}'s History` : 'Transaction History';
 
   const pageConfig: Record<Page, { title: string; component: React.ReactNode }> = {
     home: { title: 'Meal Management', component: <HomePage firstMealDate={firstMealDate} calculations={calculations} handleNavigate={handleNavigate} openSheet={openSheet} /> },
-    members: { title: 'Members', component: <MembersPage users={users} openSheet={openSheet} confirmRemoveUser={confirmRemoveUser} /> },
-    transactions: { title: transactionPageTitle, component: <TransactionsPage {...{filterUserId, users, calculations, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction, runningBalanceMap}} /> },
-    calendar: { title: 'Meal Calendar', component: <CalendarPage users={users} transactions={transactions} firstMealDate={firstMealDate} lastMealDate={lastMealDate} calculations={calculations} openSheet={openSheet} /> },
-    deposits: { title: 'All Deposits', component: <DepositsPage {...{users, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction, runningBalanceMap}} /> },
-    expenses: { title: 'All Expenses', component: <ExpensesPage {...{users, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction, runningBalanceMap}} /> },
+    members: { title: 'Members', component: <MembersPage members={members} openSheet={openSheet} confirmRemoveMember={confirmRemoveMember} /> },
+    transactions: { title: transactionPageTitle, component: <TransactionsPage {...{filterMemberId, members, calculations, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction, runningBalanceMap}} /> },
+    calendar: { title: 'Meal Calendar', component: <CalendarPage members={members} transactions={transactions} firstMealDate={firstMealDate} lastMealDate={lastMealDate} calculations={calculations} openSheet={openSheet} /> },
+    deposits: { title: 'All Deposits', component: <DepositsPage {...{members, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction, runningBalanceMap}} /> },
+    expenses: { title: 'All Expenses', component: <ExpensesPage {...{members, sortedTransactions, searchQuery, setSearchQuery, openSheet, confirmRemoveTransaction, runningBalanceMap}} /> },
     settings: { title: 'Settings', component: <SettingsPage onDataReset={openResetConfirmationDialog} /> },
   };
 
@@ -862,7 +862,7 @@ const App: React.FC = () => {
           onOpenMenu={() => setIsMenuOpen(true)}
         />
         <main className={`flex-1 overflow-y-auto ${page === 'calendar' ? 'p-2 pb-20' : 'p-4 md:p-6 pb-24'} md:pb-6`}>
-          <div key={page + (filterUserId || '')} className={`max-w-4xl mx-auto fade-in ${page === 'calendar' ? 'h-full' : ''}`}>
+          <div key={page + (filterMemberId || '')} className={`max-w-4xl mx-auto fade-in ${page === 'calendar' ? 'h-full' : ''}`}>
             {ActivePage}
           </div>
         </main>
@@ -879,7 +879,7 @@ const App: React.FC = () => {
         config={sheetConfig}
         onClose={closeSheet}
         onSubmit={handleEntrySubmit}
-        users={users}
+        members={members}
         isSubmitting={isSubmitting}
       />
        <AlertDialog

@@ -29,7 +29,7 @@ const AddMenuSheet: React.FC<AddMenuSheetProps> = ({ isOpen, onClose, onSelect }
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Add New</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Log a new meal, deposit, expense or member.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Log a new meal, deposit, or expense.</p>
             </div>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><XIcon /></button>
           </div>
