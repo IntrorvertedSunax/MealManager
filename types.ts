@@ -9,7 +9,8 @@ export type TransactionType = 'meal' | 'expense' | 'deposit' | 'shared-expense';
 export interface Transaction {
   id: string;
   type: TransactionType;
-  memberId: string; // The member associated with the transaction (who ate, who deposited, who paid)
+  memberId: string; // The member associated with the transaction (who ate, who deposited, who paid). For multi-payer expenses, this could be the first payer.
+  payerIds?: string[]; // For multi-payer expenses. If present, this holds all payers.
   date: string;
   amount: number; // Always positive.
   description: string;
@@ -54,4 +55,14 @@ export interface AppSettings {
   enabledMeals: MealOption[];
   defaultMealValues: Partial<Record<MealOption, number>>;
   theme: 'light' | 'dark' | 'system';
+}
+
+// This interface defines the structure for an individual member's calculated data.
+export interface MemberData {
+  member: Member;
+  memberDeposits: number;
+  memberMealCount: number;
+  memberMealCost: number; // The total cost of meals consumed by this member.
+  memberSharedExpenseCost: number; // The member's share of all shared expenses.
+  balance: number;
 }

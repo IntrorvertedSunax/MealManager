@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Member, Transaction, TransactionType, Page, ModalConfig, AlertDialogConfig, ModalType } from './types';
 import Header from './components/ui/Header';
@@ -673,17 +674,16 @@ const App: React.FC = () => {
                     else { // deposit, expense, shared-expense (without credit)
                         if (type === 'expense' && txEntry.payerIds && txEntry.payerIds.length > 0) {
                             const { payerIds, amount, description } = txEntry;
-                            const splitAmount = (amount || 0) / payerIds.length;
-                            const newTransactions: Transaction[] = payerIds.map(payerId => 
-                                db.addTransaction({
-                                    type: 'expense',
-                                    memberId: payerId,
-                                    date: dateForTransaction,
-                                    amount: splitAmount,
-                                    description: description?.trim() || '',
-                                })
-                            );
-                            setTransactions(prev => [...prev, ...newTransactions]);
+                            const newTransactionData: Omit<Transaction, 'id'> = {
+                                type: 'expense',
+                                memberId: payerIds[0], // For compatibility
+                                payerIds: payerIds,
+                                date: dateForTransaction,
+                                amount: amount || 0,
+                                description: description?.trim() || '',
+                            };
+                            const newTransaction = db.addTransaction(newTransactionData);
+                            setTransactions(prev => [...prev, newTransaction]);
                         } else {
                             const newTransactionData: Omit<Transaction, 'id'> = {
                                 type: type as TransactionType,

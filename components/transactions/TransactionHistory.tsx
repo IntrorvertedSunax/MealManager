@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Transaction, Member } from '../../types';
 import { PencilIcon, TrashIcon } from '../ui/Icons';
 import Badge from '../ui/Badge';
@@ -35,6 +35,19 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
     title = member?.name || 'Unknown';
   }
 
+  const paidByText = useMemo(() => {
+    if (!isExpenseType) return null;
+    
+    if (transaction.payerIds && transaction.payerIds.length > 0) {
+      return transaction.payerIds
+        .map(id => members.find(m => m.id === id)?.name)
+        .filter(Boolean)
+        .join(', ');
+    }
+    
+    return member?.name || null;
+  }, [transaction, members, isExpenseType, member]);
+
   // Compact layout for Deposits & Expenses pages
   if (hideRunningBalance) {
     const sharedWithNames = transaction.type === 'shared-expense'
@@ -63,9 +76,9 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
             <p className={`font-extrabold text-lg ${amountColor}`}>
               {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(2)}
             </p>
-            {isExpenseType && member && (
+            {isExpenseType && paidByText && (
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Paid by {member.name}
+                Paid by {paidByText}
               </p>
             )}
           </div>
@@ -116,9 +129,9 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
           <p className={`font-extrabold text-xl ${amountColor}`}>
             {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(2)}
           </p>
-          {isExpenseType && member && (
+          {isExpenseType && paidByText && (
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              Paid by {member.name}
+              Paid by {paidByText}
             </p>
           )}
         </div>

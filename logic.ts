@@ -1,15 +1,4 @@
-import { Member, Transaction } from './types';
-
-// This interface defines the structure for an individual member's calculated data.
-export interface MemberData {
-  member: Member;
-  memberDeposits: number;
-  memberExpensesPaid: number; // The total amount of expenses this member has personally paid for.
-  memberMealCount: number;
-  memberMealCost: number; // The total cost of meals consumed by this member.
-  memberSharedExpenseCost: number; // The member's share of all shared expenses.
-  balance: number;
-}
+import { Member, Transaction, MemberData } from './types';
 
 // This interface defines the structure for all calculated metrics for the entire group.
 export interface CalculationMetrics {
@@ -65,10 +54,6 @@ export function calculateMetrics(members: Member[], transactions: Transaction[])
     const memberDeposits = deposits
       .filter(t => t.memberId === member.id)
       .reduce((sum, t) => sum + t.amount, 0);
-      
-    const memberExpensesPaid = transactions
-      .filter(t => (t.type === 'expense' || t.type === 'shared-expense') && t.memberId === member.id)
-      .reduce((sum, t) => sum + t.amount, 0);
 
     const memberMealCount = meals
       .filter(t => t.memberId === member.id)
@@ -84,13 +69,15 @@ export function calculateMetrics(members: Member[], transactions: Transaction[])
         return sum;
     }, 0);
     
-    // The member's personal balance is their total deposits minus their meal costs and their share of shared expenses.
-    const balance = memberDeposits - memberMealCost - memberSharedExpenseCost;
+    // The member's personal balance is their total credits minus their total debits.
+    // An expense paid by a member is not a credit towards their personal balance. Only deposits are.
+    const credits = memberDeposits;
+    const debits = memberMealCost + memberSharedExpenseCost;
+    const balance = credits - debits;
 
     return { 
       member, 
       memberDeposits, 
-      memberExpensesPaid, 
       memberMealCount, 
       memberMealCost,
       memberSharedExpenseCost,
