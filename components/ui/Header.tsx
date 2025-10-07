@@ -1,5 +1,6 @@
 import React from 'react';
 import { MenuIcon } from './Icons';
+import ThemeToggleButton from './ThemeToggleButton';
 
 interface HeaderProps {
   title: string;
@@ -22,6 +23,10 @@ const Header: React.FC<HeaderProps> = ({ title, onOpenMenu }) => {
           <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
             {title}
           </h1>
+        </div>
+
+        <div className="absolute right-4">
+          <ThemeToggleButton />
         </div>
       </div>
     </header>

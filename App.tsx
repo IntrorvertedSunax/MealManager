@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Member, Transaction, TransactionType, Page, ModalConfig, AlertDialogConfig, ModalType } from './types';
 import Header from './components/ui/Header';
@@ -538,7 +539,7 @@ const App: React.FC = () => {
                 setMembers(prev => [...prev, newMember]);
             }
         } else { // Transaction types
-            const txEntry = entry as Partial<Transaction>;
+            const txEntry = entry as Partial<Transaction> & { addToDeposit?: boolean; payerIds?: string[] };
             let dateForTransaction: string;
 
             if (isEditing) {
@@ -562,7 +563,11 @@ const App: React.FC = () => {
                 dateForTransaction = selectedDate.toISOString();
             }
 
-            if (!txEntry.memberId) throw new Error('A member must be selected.');
+            if (!isEditing && type !== 'meal' && (!txEntry.payerIds || txEntry.payerIds.length === 0) && !txEntry.memberId) {
+              throw new Error('A member must be selected.');
+            }
+            if (isEditing && !txEntry.memberId) throw new Error('A member must be selected.');
+
             if (type !== 'meal' && (!txEntry.amount || txEntry.amount <= 0)) throw new Error('Amount must be greater than 0.');
             if (type === 'shared-expense' && (!txEntry.sharedWith || txEntry.sharedWith.length === 0)) throw new Error('At least one member must share the expense.');
 
@@ -642,17 +647,55 @@ const App: React.FC = () => {
                             const newTransaction = db.addTransaction(newTransactionData);
                             setTransactions(prev => [...prev, newTransaction]);
                         }
-                    } else { // deposit, expense, shared-expense
-                        const newTransactionData: Omit<Transaction, 'id'> = {
-                            type: type as TransactionType,
+                    } else if (type === 'shared-expense' && txEntry.addToDeposit) {
+                        const commonData = {
                             memberId: txEntry.memberId as string,
                             date: dateForTransaction,
                             amount: txEntry.amount || 0,
-                            description: txEntry.description?.trim() || '',
-                            ...(type === 'shared-expense' && { sharedWith: txEntry.sharedWith })
                         };
-                        const newTransaction = db.addTransaction(newTransactionData);
-                        setTransactions(prev => [...prev, newTransaction]);
+                        const expenseDescription = txEntry.description?.trim() || 'Shared Expense';
+                        
+                        const newExpense = db.addTransaction({
+                            ...commonData,
+                            type: 'shared-expense',
+                            description: expenseDescription,
+                            sharedWith: txEntry.sharedWith,
+                        });
+                        
+                        const newDeposit = db.addTransaction({
+                            ...commonData,
+                            type: 'deposit',
+                            description: `Deposit for paying: ${expenseDescription}`,
+                        });
+                        
+                        setTransactions(prev => [...prev, newExpense, newDeposit]);
+                    }
+                    else { // deposit, expense, shared-expense (without credit)
+                        if (type === 'expense' && txEntry.payerIds && txEntry.payerIds.length > 0) {
+                            const { payerIds, amount, description } = txEntry;
+                            const splitAmount = (amount || 0) / payerIds.length;
+                            const newTransactions: Transaction[] = payerIds.map(payerId => 
+                                db.addTransaction({
+                                    type: 'expense',
+                                    memberId: payerId,
+                                    date: dateForTransaction,
+                                    amount: splitAmount,
+                                    description: description?.trim() || '',
+                                })
+                            );
+                            setTransactions(prev => [...prev, ...newTransactions]);
+                        } else {
+                            const newTransactionData: Omit<Transaction, 'id'> = {
+                                type: type as TransactionType,
+                                memberId: txEntry.memberId as string,
+                                date: dateForTransaction,
+                                amount: txEntry.amount || 0,
+                                description: txEntry.description?.trim() || '',
+                                ...(type === 'shared-expense' && { sharedWith: txEntry.sharedWith })
+                            };
+                            const newTransaction = db.addTransaction(newTransactionData);
+                            setTransactions(prev => [...prev, newTransaction]);
+                        }
                     }
                 }
             }
@@ -861,7 +904,7 @@ const App: React.FC = () => {
           title={pageConfig[page].title} 
           onOpenMenu={() => setIsMenuOpen(true)}
         />
-        <main className={`flex-1 overflow-y-auto ${page === 'calendar' ? 'p-2 pb-20' : 'p-4 md:p-6 pb-24'} md:pb-6`}>
+        <main className={`flex-1 overflow-y-auto ${page === 'calendar' ? 'p-2 pb-24' : 'p-4 md:p-6 pb-24'} md:pb-6`}>
           <div key={page + (filterMemberId || '')} className={`max-w-4xl mx-auto fade-in ${page === 'calendar' ? 'h-full' : ''}`}>
             {ActivePage}
           </div>

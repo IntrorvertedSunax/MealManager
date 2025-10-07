@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Member, Transaction } from '../../types';
 import { toast } from '../ui/Toaster';
 import Button from '../ui/Button';
@@ -38,7 +38,14 @@ const SharedExpenseForm: React.FC<SharedExpenseFormProps> = ({ data, onSubmit, i
     return members.map(u => u.id);
   });
 
+  const [addToDeposit, setAddToDeposit] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const payer = useMemo(() => members.find(m => m.id === formData.memberId), [members, formData.memberId]);
+
+  const depositCheckboxLabel = payer
+    ? `Add this amount to ${payer.name}'s balance`
+    : "Add this amount to the payer's balance";
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -96,13 +103,16 @@ const SharedExpenseForm: React.FC<SharedExpenseFormProps> = ({ data, onSubmit, i
       return;
     }
     
-    const submissionData = { 
+    const submissionData: Partial<Transaction> & { addToDeposit?: boolean } = { 
       ...formData, 
       date: date.toISOString(),
-      sharedWith: sharedWith
+      sharedWith: sharedWith,
+      addToDeposit: isEditing ? false : addToDeposit,
     };
     if (submissionData.amount !== undefined) {
-      submissionData.amount = parseFloat(submissionData.amount) || 0;
+      // FIX: Explicitly cast `submissionData.amount` to a string before passing it to `parseFloat`.
+      // This resolves a TypeScript error where the type was being incorrectly inferred as a number.
+      submissionData.amount = parseFloat(String(submissionData.amount)) || 0;
     }
     
     onSubmit(submissionData);
@@ -130,6 +140,21 @@ const SharedExpenseForm: React.FC<SharedExpenseFormProps> = ({ data, onSubmit, i
           leadingIcon={<span className="sm:text-sm font-black">৳</span>}
         />
       </FormField>
+
+      {!isEditing && (
+        <div className="flex items-center space-x-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+          <input
+            id="add-to-deposit"
+            type="checkbox"
+            checked={addToDeposit}
+            onChange={(e) => setAddToDeposit(e.target.checked)}
+            className="h-5 w-5 rounded border-slate-300 dark:border-slate-600 text-teal-600 focus:ring-teal-500 bg-white dark:bg-slate-700"
+          />
+          <label htmlFor="add-to-deposit" className="text-sm font-bold text-teal-600 dark:text-teal-400 flex-1 cursor-pointer">
+            {depositCheckboxLabel}
+          </label>
+        </div>
+      )}
       
       <FormField label="Description" error={errors.description}>
         <Textarea 

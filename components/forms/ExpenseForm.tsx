@@ -5,6 +5,7 @@ import Button from '../ui/Button';
 import { Input, FormField, Textarea } from './FormControls';
 import MemberSelect from './UserSelect';
 import DatePicker from '../ui/DatePicker';
+import MultiMemberSelect from './MultiUserSelect';
 
 interface ExpenseFormProps {
   data: Transaction | null;
@@ -29,11 +30,16 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
     return {};
   });
 
+  const [paidByIds, setPaidByIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.memberId) newErrors.memberId = 'Please select a member.';
+    if (isEditing) {
+      if (!formData.memberId) newErrors.memberId = 'Please select a member.';
+    } else {
+      if (paidByIds.length === 0) newErrors.memberId = 'Please select at least one member.';
+    }
     if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = 'Amount must be greater than 0.';
     if (!formData.description?.trim()) newErrors.description = 'Description is required.';
     setErrors(newErrors);
@@ -66,6 +72,17 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
     }
   };
 
+  const handlePayersChange = (memberIds: string[]) => {
+    setPaidByIds(memberIds);
+    if (errors.memberId) {
+        setErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.memberId;
+            return newErrors;
+        });
+    }
+  };
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -75,9 +92,13 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
       return;
     }
     
-    const submissionData = { ...formData, date: date.toISOString() };
+    const submissionData = { 
+        ...formData, 
+        date: date.toISOString(),
+        ...(isEditing ? {} : { payerIds: paidByIds })
+    };
     if (submissionData.amount !== undefined) {
-      submissionData.amount = parseFloat(submissionData.amount) || 0;
+      submissionData.amount = parseFloat(String(submissionData.amount)) || 0;
     }
     
     onSubmit(submissionData);
@@ -90,12 +111,21 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ data, onSubmit, isSubmitting,
       </FormField>
 
       <FormField label="Paid by" error={errors.memberId}>
-         <MemberSelect
-            members={members}
-            selectedMemberId={formData.memberId || null}
-            onChange={handleMemberChange}
-            placeholder="Select a member"
-        />
+         {isEditing ? (
+            <MemberSelect
+                members={members}
+                selectedMemberId={formData.memberId || null}
+                onChange={handleMemberChange}
+                placeholder="Select a member"
+            />
+         ) : (
+            <MultiMemberSelect
+                members={members}
+                selectedMemberIds={paidByIds}
+                onChange={handlePayersChange}
+                placeholder="Select a member"
+            />
+         )}
       </FormField>
 
       <FormField label="Amount" error={errors.amount}>
