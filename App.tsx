@@ -53,7 +53,7 @@ const HomePage = ({ firstMealDate, calculations, handleNavigate, openSheet }: {
   });
   
   const formatCurrencyWithCommas = (value: number) => {
-    return Math.abs(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return Math.abs(value).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
   return (
@@ -175,7 +175,7 @@ const SharedExpenseShareItem: React.FC<SharedExpenseShareItemProps> = ({ transac
         </div>
         <div className="text-right flex-shrink-0">
           <p className="font-bold text-xl text-red-600 dark:text-red-400">
-            -<span className="font-black">৳</span>{yourShare.toFixed(2)}
+            -<span className="font-black">৳</span>{yourShare.toFixed(0)}
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Your Share</p>
         </div>
@@ -254,7 +254,7 @@ const TransactionsPage = ({
               </p>
           </div>
           <hr className="my-3 border-slate-100 dark:border-slate-700" />
-          <div className="grid grid-cols-3 text-center gap-2">
+          <div className="grid grid-cols-2 text-center gap-x-4 gap-y-3">
               <div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm">Total Meals</p>
                   <p className="font-extrabold text-slate-800 dark:text-slate-100 text-lg">{memberBalanceData.memberMealCount}</p>
@@ -262,6 +262,13 @@ const TransactionsPage = ({
               <div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm">Total Deposit</p>
                   <p className="font-extrabold text-slate-800 dark:text-slate-100 text-lg"><span className="font-black">৳</span>{memberBalanceData.memberDeposits.toFixed(0)}</p>
+              </div>
+              <div>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">Meal Cost</p>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-100 text-lg">
+                    <span className="font-black">৳</span>
+                    {memberBalanceData.memberMealCost.toFixed(0)}
+                  </p>
               </div>
               <div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm">Total Cost</p>
@@ -649,27 +656,32 @@ const App: React.FC = () => {
                             setTransactions(prev => [...prev, newTransaction]);
                         }
                     } else if (type === 'shared-expense' && txEntry.addToDeposit) {
+                        const expenseDate = new Date(dateForTransaction);
+                        // Ensure the deposit is always processed *before* the expense by subtracting 1ms
+                        const depositDate = new Date(expenseDate.getTime() - 1);
+
                         const commonData = {
                             memberId: txEntry.memberId as string,
-                            date: dateForTransaction,
                             amount: txEntry.amount || 0,
                         };
                         const expenseDescription = txEntry.description?.trim() || 'Shared Expense';
+
+                        const newDeposit = db.addTransaction({
+                            ...commonData,
+                            date: depositDate.toISOString(),
+                            type: 'deposit',
+                            description: `Deposit for paying: ${expenseDescription}`,
+                        });
                         
                         const newExpense = db.addTransaction({
                             ...commonData,
+                            date: expenseDate.toISOString(),
                             type: 'shared-expense',
                             description: expenseDescription,
                             sharedWith: txEntry.sharedWith,
                         });
                         
-                        const newDeposit = db.addTransaction({
-                            ...commonData,
-                            type: 'deposit',
-                            description: `Deposit for paying: ${expenseDescription}`,
-                        });
-                        
-                        setTransactions(prev => [...prev, newExpense, newDeposit]);
+                        setTransactions(prev => [...prev, newDeposit, newExpense]);
                     }
                     else { // deposit, expense, shared-expense (without credit)
                         if (type === 'expense' && txEntry.payerIds && txEntry.payerIds.length > 0) {
@@ -903,6 +915,7 @@ const App: React.FC = () => {
         <Header 
           title={pageConfig[page].title} 
           onOpenMenu={() => setIsMenuOpen(true)}
+          currentPage={page}
         />
         <main className={`flex-1 overflow-y-auto ${page === 'calendar' ? 'p-2 pb-24' : 'p-4 md:p-6 pb-24'} md:pb-6`}>
           <div key={page + (filterMemberId || '')} className={`max-w-4xl mx-auto fade-in ${page === 'calendar' ? 'h-full' : ''}`}>

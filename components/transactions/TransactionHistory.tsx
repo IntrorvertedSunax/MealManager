@@ -74,7 +74,7 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
           
           <div className="text-right flex-shrink-0">
             <p className={`font-extrabold text-lg ${amountColor}`}>
-              {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(2)}
+              {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(0)}
             </p>
             {isExpenseType && paidByText && (
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -127,7 +127,7 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
         </div>
         <div className="text-right flex-shrink-0">
           <p className={`font-extrabold text-xl ${amountColor}`}>
-            {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(2)}
+            {sign}<span className="font-black">৳</span>{transaction.amount.toFixed(0)}
           </p>
           {isExpenseType && paidByText && (
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
@@ -148,7 +148,7 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ transaction, 
                 <span className="text-slate-600 dark:text-slate-300">Balance:</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-100 ml-1">
                   <span className="font-black">৳</span>
-                  {runningBalance.toFixed(2)}
+                  {runningBalance.toFixed(0)}
                 </span>
               </p>
             </div>

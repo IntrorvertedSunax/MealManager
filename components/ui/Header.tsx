@@ -1,13 +1,15 @@
 import React from 'react';
 import { MenuIcon } from './Icons';
 import ThemeToggleButton from './ThemeToggleButton';
+import { Page } from '../../types';
 
 interface HeaderProps {
   title: string;
   onOpenMenu: () => void;
+  currentPage: Page;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, onOpenMenu }) => {
+const Header: React.FC<HeaderProps> = ({ title, onOpenMenu, currentPage }) => {
   return (
     <header className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm dark:border-b dark:border-slate-700 sticky top-0 z-40 flex-shrink-0">
       <div className="container mx-auto px-4 py-4 md:px-8 relative flex items-center justify-center">
@@ -26,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ title, onOpenMenu }) => {
         </div>
 
         <div className="absolute right-4">
-          <ThemeToggleButton />
+          {currentPage === 'home' && <ThemeToggleButton />}
         </div>
       </div>
     </header>
